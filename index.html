@@ -144,6 +144,89 @@
       .animate-float {
         animation: float 3s ease-in-out infinite;
       }
+
+      /* Smooth movement for mascot when changing sides */
+      .mascot-smooth-transition {
+        transition: left 0.6s cubic-bezier(0.22,1,0.36,1), transform 0.35s ease;
+        will-change: left, transform;
+      }
+
+      /* Subtle lift while moving */
+      .mascot-lift {
+        transform: translateY(-6px);
+      }
+
+      /* Llamativos - UI enhancements */
+      .header-gradient {
+        background: linear-gradient(90deg, rgba(0,194,203,0.06), rgba(51,51,153,0.06));
+        border-bottom: 1px solid rgba(0,0,0,0.06);
+        backdrop-filter: blur(6px);
+      }
+
+      .module-tab-enhanced { transition: transform .18s ease, box-shadow .18s ease; }
+      .module-tab-enhanced:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 8px 24px rgba(16,24,40,0.08); }
+
+      .btn-new-note { background: linear-gradient(135deg,#ff7ad9,#ffd24a); color: #061025; box-shadow: 0 10px 30px rgba(255,122,173,0.12); transition: transform .15s ease; }
+      .btn-new-note:hover { transform: translateY(-4px); }
+
+      .fab-accent { background: linear-gradient(180deg,#ff2d95,#7c3aed); box-shadow: 0 12px 30px rgba(124,58,237,0.28); border: none; }
+
+      .note-preview { transition: transform .18s ease, box-shadow .18s ease; overflow: hidden; position: relative; }
+      .note-preview:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 18px 40px rgba(2,6,23,0.12); }
+      .note-preview::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.04)); mix-blend-mode: overlay; }
+
+      .mascot-bubble {
+        transform-origin: bottom right;
+        animation: pop .26s ease;
+        border-radius: 16px;
+        box-sizing: border-box;
+        max-width: 260px;
+        white-space: normal; /* allow wrapping */
+        overflow-wrap: anywhere; /* break long words */
+        word-break: break-word; /* fallback for older engines */
+        hyphens: auto;
+        line-height: 1.25;
+        padding-bottom: 0.9rem; /* space for arrow pseudo-element */
+        position: relative; /* required for ::after positioning */
+      }
+
+      /* Triangle indicator implemented as a pseudo-element to avoid DOM clipping */
+      .mascot-bubble::after {
+        content: '';
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        transform: rotate(45deg);
+        bottom: -6px; /* half of height to align visually */
+        right: 24px; /* default position for right-aligned bubble */
+        background: inherit; /* inherit bubble background */
+        border-right: 1px solid rgba(0,0,0,0.06);
+        border-bottom: 1px solid rgba(0,0,0,0.06);
+        box-sizing: border-box;
+        z-index: 0;
+      }
+
+      /* When bubble is aligned to the left side, move the arrow to the left */
+      .mascot-bubble.left::after {
+        right: auto;
+        left: 24px;
+      }
+
+      /* Ensure the arrow matches the bubble background and border in both variants */
+      .mascot-bubble.bg-white::after {
+        background: #ffffff; /* explicit to avoid inheritance quirks */
+        border-right: 1px solid rgba(0,0,0,0.06);
+        border-bottom: 1px solid rgba(0,0,0,0.06);
+      }
+      .mascot-bubble.bg-slate-800::after {
+        background: #0f1724; /* close to Tailwind slate-800 */
+        border-right: 1px solid rgba(255,255,255,0.04);
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+      }
+      @keyframes pop { 0% { transform: scale(.9); opacity: 0 } 60% { transform: scale(1.02); opacity: 1 } 100% { transform: scale(1); } }
+
+      /* Small accent for template headers */
+      .tpl-box { box-shadow: 0 6px 18px rgba(16,24,40,0.04); }
     </style>
 
     <!-- Import Map for ES Modules -->
@@ -267,12 +350,12 @@
       window.onerror = function(message, source, lineno, colno, error) {
         const msg = `${message}\nSource: ${source}:${lineno}:${colno}\n${error && error.stack ? error.stack : ''}`;
         console.error('GlobalError', msg);
-        showErrorOverlay('Runtime Error', msg);
+        showErrorOverlay('Error de ejecución', msg);
       };
       window.addEventListener('unhandledrejection', function(evt) {
         const reason = evt.reason && (evt.reason.stack || evt.reason.message || JSON.stringify(evt.reason));
         console.error('UnhandledRejection', reason);
-        showErrorOverlay('Unhandled Promise Rejection', String(reason));
+        showErrorOverlay('Rechazo de promesa no manejado', String(reason));
       });
       
       // --- HELPER FUNCTIONS ---
@@ -348,14 +431,70 @@
         const clickResetTimer = useRef(null);
         const messageTimer = useRef(null);
 
-        const getIdlePhrases = () => [`¿Todo bien, ${userName}?`, "Aquí estaré.", "Organización = Éxito", "Bebe agua.", `¿Qué planes hoy, ${userName}?`, "Modo zen activado.", `Soy ${mascotName}, tu asistente.`];
-        const getWorkPhrases = () => ["¡A trabajar!", `No te rindas, ${userName}.`, "Tú puedes con esto.", "Una menos, faltan pocas.", "¡Concéntrate!", "Menos scroll, más acción."];
-        const getAngryPhrases = () => ["¡YA BASTA!", "¡Me mareas!", "¡Déjame en paz!", "¡Voy a reiniciarme!", "¡No me toques!", "¡Error 404: Paciencia not found!"];
-        const getWalkingPhrases = () => ["Patrullando el área...", "Concéntrate, no me mires.", "Revisando bambú... digo, tareas.", "Caminando voy...", "Vigilando..."];
-        const getConverterPhrases = () => ["Masticando documentos...", `Soy un ${mascotName} de oficina.`, "PDF listo en 3, 2...", "Dame ese Word."];
-        const getJokesPhrases = () => ["¿Sabes por qué los esqueletos son tan tranquilos? Porque nada les quita el sueño. ¡Jajaja!", "¿Qué le dice una impresora a otra? ¿Esa hoja es tuya o es impresión mía?", "¿Cuál es el colmo de un electricista? No encontrar la fase.", "Estás más perdido que un pulpo en un garaje...", "¿Qué hace una abeja en el gimnasio? ¡Zum-ba!"];
-        const getConfusedPhrases = () => ["Uff, esto no tiene ni pies ni cabeza.", "Mis circuitos cerebrales acaban de hacer corto.", "¿Me perdí de algo?", "Error 404: Sentido no encontrado."];
-        const getVariedPhrases = () => ["¡Con esa energía, podrías cargar mi batería!", `No te hagas el ${mascotName}, ¡sabes lo que tienes que hacer!`, "¡Deja de perder el tiempo!", "¿Cuál es tu superpoder de hoy?"];
+        const getIdlePhrases = () => [
+          `Hola ${userName}, ¿cómo vas?`,
+          'Estoy aquí para ayudarte.',
+          'Organiza hoy, disfruta mañana.',
+          'Tómate un vaso de agua.',
+          `¿Qué planeas hacer hoy, ${userName}?`,
+          'Respira profundo, pequeños pasos.',
+          `Soy ${mascotName}, tu asistente.`
+        ];
+
+        const getWorkPhrases = () => [
+          'Manos a la obra, tú puedes.',
+          `No te rindas, ${userName}.`,
+          'Un paso a la vez.',
+          'Vas bien, sigue así.',
+          'Concéntrate en una tarea.',
+          'Reduce distracciones, aumenta resultados.'
+        ];
+
+        const getAngryPhrases = () => [
+          'Necesito un descanso, por favor.',
+          'Calma, respira.',
+          '¡Ups! Esto me está saturando.',
+          'Voy a reiniciarme en un momento.',
+          'Por favor, deja de tocarme tanto.',
+          'Tranquilo, lo resolvemos juntos.'
+        ];
+
+        const getWalkingPhrases = () => [
+          'Explorando tu lista de tareas...',
+          'Poniendo orden por aquí...',
+          'Revisando progreso...',
+          'Avanzo un poco, vuelvo enseguida.',
+          'Vigilando que todo esté en orden.'
+        ];
+
+        const getConverterPhrases = () => [
+          'Convirtiendo documento...',
+          `Procesando con ${mascotName}...`,
+          'Preparando tu PDF, espera un momento.',
+          'Dame el archivo y me ocupo.'
+        ];
+
+        const getJokesPhrases = () => [
+          '¿Sabes por qué el libro fue a la playa? Porque quería ser un best-seller.',
+          '¿Qué le dijo una hoja a otra? Nos vemos en la impresora.',
+          '¿Cuál es el colmo de un electricista? Que no encuentre la corriente.',
+          'Un pulpo en un garaje... eso sí es confuso.',
+          '¿Quieres escuchar un chiste corto?'
+        ];
+
+        const getConfusedPhrases = () => [
+          'No entiendo bien eso, ¿puedes explicarlo?',
+          'Creo que perdí el hilo.',
+          'Esto necesita más contexto.',
+          'No encuentro sentido a eso.'
+        ];
+
+        const getVariedPhrases = () => [
+          'Con esa energía, puedes hacer mucho hoy.',
+          `Cuenta conmigo, ${userName}.`,
+          'Pequeños pasos, grandes logros.',
+          '¿Cuál es el objetivo principal de hoy?'
+        ];
 
         useEffect(() => {
             const moveInterval = setInterval(() => {
@@ -417,21 +556,19 @@
 
         return (
           <div style={{
-              position: 'absolute',
-              bottom: '6rem', 
-              transition: isMoving ? 'left 6s linear' : 'left 0.5s ease-out',
-              left: positionX === 1 ? '20px' : 'calc(100% - 90px)',
-              zIndex: 50,
-              transform: positionX === 1 ? 'scaleX(-1)' : 'scaleX(1)' 
-          }}>
-              {message && (
-                  <div style={{ transform: positionX === 1 ? 'scaleX(-1)' : 'none' }} className={`absolute bottom-[110%] ${positionX === 1 ? 'right-0 origin-bottom-right text-right' : 'right-0 origin-bottom-right text-right'} w-max max-w-[260px] px-4 py-3 rounded-2xl text-sm font-bold shadow-xl z-[100] border leading-snug whitespace-normal ${isDarkMode ? 'bg-white text-black border-slate-300' : 'bg-slate-800 text-white border-slate-800'}`}>
+                position: 'absolute',
+                bottom: '6rem', 
+                left: positionX === 1 ? '20px' : 'calc(100% - 90px)',
+                zIndex: 50,
+                transform: isMoving ? 'translateY(-6px)' : 'translateY(0)'
+            }} className={`mascot-smooth-transition`}>
+                {message && (
+                  <div className={`absolute bottom-[110%] mascot-bubble ${positionX === 1 ? 'left-0 origin-bottom-left text-left left' : 'right-0 origin-bottom-right text-right right'} w-max max-w-[260px] px-4 py-3 rounded-2xl text-sm font-bold shadow-xl z-[100] border leading-snug whitespace-normal ${isDarkMode ? 'bg-white text-black border-slate-300' : 'bg-slate-800 text-white border-slate-800'}`}>
                       {message}
-                      <div className={`absolute bottom-[-6px] w-3 h-3 transform rotate-45 ${isDarkMode ? 'bg-white border-r border-b border-slate-300' : 'bg-slate-800'} right-6`}></div>
                   </div>
-              )}
+                )}
 
-              <div onClick={handleTouch} className={`relative w-20 h-24 cursor-pointer transition-transform duration-200 active:scale-90 flex flex-col items-center justify-end ${isAngry ? 'animate-shake' : ''} ${isMoving ? 'animate-walk-bounce' : 'animate-float'}`}>
+              <div onClick={handleTouch} style={{ transform: positionX === 1 ? 'scaleX(-1)' : 'none', transformOrigin: 'center' }} className={`relative w-20 h-24 cursor-pointer transition-transform duration-200 active:scale-90 flex flex-col items-center justify-end ${isAngry ? 'animate-shake' : ''} ${isMoving ? 'animate-walk-bounce' : 'animate-float'}`}>
                   <div className="absolute top-0 left-2 w-4 h-4 bg-white rounded-full border border-slate-300 shadow-sm"></div>
                   <div className="absolute top-0 right-2 w-4 h-4 bg-white rounded-full border border-slate-300 shadow-sm"></div>
                   <div className="w-20 h-24 bg-white rounded-[45%] relative z-10 shadow-md border border-slate-300 flex flex-col items-center pt-6 overflow-hidden">
@@ -701,6 +838,19 @@
            window.open(`https://wa.me/51900779111?text=${encodeURIComponent(msg)}`);
         };
 
+        // Añadir nota como evento al calendario desde Configuración
+        const addNoteToCalendar = () => {
+          const title = prompt('Título del evento (ej. Revisión de notas)');
+          if (!title) return alert('Evento cancelado: falta título');
+          const dateInput = prompt('Fecha y hora (formato: YYYY-MM-DDTHH:MM). Ej: 2025-11-25T15:30');
+          if (!dateInput) return alert('Evento cancelado: falta fecha');
+          const when = new Date(dateInput);
+          if (isNaN(when.getTime())) return alert('Fecha no válida');
+          const newEvent = { id: generateId(), title, start: when, end: addDays(when, 1), color: newItemColor };
+          setEvents(prev => [newEvent, ...prev]);
+          alert('Evento agregado al calendario');
+        };
+
         const handleFileDrop = async (e) => {
             e.preventDefault();
             let file = e.dataTransfer ? e.dataTransfer.files[0] : e.target.files[0];
@@ -760,7 +910,7 @@
                       </div>
                     </div>
                     <div className="col tpl-box">
-                      <div className="text-xs font-bold mb-2">To Do</div>
+                      <div className="text-xs font-bold mb-2">Tareas</div>
                       <textarea rows="12" value={activeNote.todo || ''} onChange={(e) => setNotes(prev => prev.map(n => n.id === activeNoteId ? { ...n, todo: e.target.value } : n))} placeholder="Tareas..." />
                     </div>
                   </div>
@@ -813,7 +963,7 @@
                   <div className="ml-auto text-xs opacity-60">Seleccionado: <span className="font-semibold ml-1">{noteTemplateSelection.replace('template-','')}</span></div>
                </div>
                <div className="grid grid-cols-2 gap-4">
-                  <button onClick={() => { const newNote = { id: generateId(), title: "", content: "", createdAt: new Date(), styleId: "bg-white" }; setNotes([newNote, ...notes]); setActiveNoteId(newNote.id); }} className={`aspect-square rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 opacity-60 hover:opacity-100 ${isDarkMode ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-300 hover:bg-slate-100'}`}><Plus size={30} /><span className="text-xs font-bold">Nueva Nota</span></button>
+                  <button onClick={() => { const newNote = { id: generateId(), title: "", content: "", createdAt: new Date(), styleId: "bg-white" }; setNotes([newNote, ...notes]); setActiveNoteId(newNote.id); }} className={`aspect-square rounded-2xl border-2 border-dashed btn-new-note flex flex-col items-center justify-center gap-2 opacity-90 hover:opacity-100 ${isDarkMode ? 'border-slate-700' : ''}`}><Plus size={30} /><span className="text-xs font-bold">Nueva Nota</span></button>
                   <button onClick={() => {
                       const newNote = {
                         id: generateId(),
@@ -830,10 +980,10 @@
                         objectives: ""
                       };
                       setNotes([newNote, ...notes]);
-                      setActiveNoteId(newNote.id);
-                    }} className={`aspect-square rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 opacity-60 hover:opacity-100 ${isDarkMode ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-300 hover:bg-slate-100'}`}><Plus size={30} /><span className="text-xs font-bold">Nueva Nota</span></button>
+                        setActiveNoteId(newNote.id);
+                      }} className={`aspect-square rounded-2xl border-2 border-dashed btn-new-note flex flex-col items-center justify-center gap-2 opacity-90 hover:opacity-100 ${isDarkMode ? 'border-slate-700' : ''}`}><Plus size={30} /><span className="text-xs font-bold">Nueva Nota</span></button>
                    {notes.map(note => (
-                    <div key={note.id} onClick={() => setActiveNoteId(note.id)} className={`aspect-square rounded-2xl p-4 shadow-sm relative group cursor-pointer overflow-hidden border border-black/5 ${note.styleId}`} style={{ backgroundColor: note.styleId && note.styleId.startsWith('#') ? note.styleId : undefined }}>
+                    <div key={note.id} onClick={() => setActiveNoteId(note.id)} className={`aspect-square rounded-2xl p-4 shadow-sm relative group cursor-pointer overflow-hidden border border-black/5 note-preview ${note.styleId}`} style={{ backgroundColor: note.styleId && note.styleId.startsWith('#') ? note.styleId : undefined }}>
                       {/* preview para plantilla diaria */}
                       {note.styleId === 'template-daily' ? (
                         <div className="h-full flex flex-col justify-between">
@@ -842,7 +992,7 @@
                             <div className="text-xs opacity-60">{note.date || ''}</div>
                           </div>
                           <div className="template-lined-preview flex-1 rounded-md p-2">{(note.phrase && <div className="text-sm font-semibold mb-2 truncate">{note.phrase}</div>) || <div className="text-xs opacity-50">Frase del día</div>}</div>
-                          <div className="flex gap-2 mt-2 text-xs opacity-60"><div className="flex-1">{(note.notesContent && note.notesContent.slice(0,60)) || 'Notas...'}</div><div style={{width:80}}>{(note.todo && 'ToDo') || ''}</div></div>
+                          <div className="flex gap-2 mt-2 text-xs opacity-60"><div className="flex-1">{(note.notesContent && note.notesContent.slice(0,60)) || 'Notas...'}</div><div style={{width:80}}>{(note.todo && 'Tareas') || ''}</div></div>
                         </div>
                       ) : note.styleId === 'template-lined' ? (
                         <div className="h-full template-lined-preview p-2">
@@ -886,8 +1036,16 @@
                 <div className="space-y-3"><h4 className="text-sm font-bold uppercase opacity-60">Perfil</h4><div className={`flex items-center gap-3 p-3 rounded-xl border ${isDarkMode ? 'border-slate-700 bg-deep-900' : 'border-slate-200 bg-slate-50'}`}><User size={20} className="opacity-50" /><input value={userName} onChange={(e) => setUserName(e.target.value)} className="bg-transparent outline-none w-full font-semibold" /></div></div>
                 <div className="space-y-3"><h4 className="text-sm font-bold uppercase opacity-60">Mascota</h4><div className={`flex items-center gap-3 p-3 rounded-xl border ${isDarkMode ? 'border-slate-700 bg-deep-900' : 'border-slate-200 bg-slate-50'}`}><Smile size={20} className="opacity-50" /><input value={mascotName} onChange={(e) => setMascotName(e.target.value)} className="bg-transparent outline-none w-full font-semibold" /></div></div>
                 <div className="space-y-3"><h4 className="text-sm font-bold uppercase opacity-60">Seguridad</h4><button onClick={() => isBinUnlocked ? setSettingsView('bin') : setSettingsView('pin')} className={`w-full flex items-center justify-between p-3 rounded-xl border ${isDarkMode ? 'border-slate-700 bg-deep-900' : 'border-slate-200 bg-slate-50'}`}><div className="flex items-center gap-3"><Trash2 size={20} className="text-red-400" /><span className="font-semibold">Papelera</span></div><ChevronRight size={16} className="opacity-50" /></button></div>
+
+                <div className="space-y-3"><h4 className="text-sm font-bold uppercase opacity-60">Notas</h4>
+                  <div className={`flex items-center justify-between p-3 rounded-xl border ${isDarkMode ? 'border-slate-700 bg-deep-900' : 'border-slate-200 bg-slate-50'}`}>
+                    <div className="flex items-center gap-3"><StickyNote size={20} className="opacity-50" /><span className="font-semibold">Agregar nota al calendario</span></div>
+                    <button onClick={addNoteToCalendar} className="p-2 rounded-full bg-accent-cyan/20 hover:bg-accent-cyan/30"><Plus size={18} /></button>
+                  </div>
+                </div>
+
                 <div className="space-y-3"><h4 className="text-sm font-bold uppercase opacity-60">Apariencia</h4><div onClick={() => setIsDarkMode(!isDarkMode)} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer ${isDarkMode ? 'border-slate-700 bg-deep-900' : 'border-slate-200 bg-slate-50'}`}><div className="flex items-center gap-3">{isDarkMode ? <Moon size={20} className="text-yellow-400" /> : <Sun size={20} className="text-orange-500" />}<span className="font-semibold">{isDarkMode ? 'Modo Oscuro' : 'Modo Claro'}</span></div><div className={`w-10 h-5 rounded-full relative transition-colors ${isDarkMode ? 'bg-accent-cyan' : 'bg-slate-300'}`}><div className={`absolute top-1 w-3 h-3 rounded-full bg-white shadow-sm transition-all duration-300 ${isDarkMode ? 'left-6' : 'left-1'}`} /></div></div></div>
-                <div className="space-y-3"><h4 className="text-sm font-bold uppercase opacity-60">Sonidos</h4><div className="grid grid-cols-2 gap-2">{['classic', 'retro', 'soft', 'future'].map(sound => <button key={sound} onClick={() => { setSelectedSound(sound); playNotificationSound(sound); }} className={`py-2 px-3 rounded-lg text-xs border font-medium capitalize ${selectedSound === sound ? 'border-accent-cyan bg-accent-cyan/10 text-accent-cyan' : 'border-transparent bg-black/5'}`}>{sound}</button>)}</div></div>
+                <div className="space-y-3"><h4 className="text-sm font-bold uppercase opacity-60">Sonidos</h4><div className="grid grid-cols-2 gap-2">{[{id:'classic',label:'Clásico'},{id:'retro',label:'Retro'},{id:'soft',label:'Suave'},{id:'future',label:'Futuro'}].map(s => <button key={s.id} onClick={() => { setSelectedSound(s.id); playNotificationSound(s.id); }} className={`py-2 px-3 rounded-lg text-xs border font-medium capitalize ${selectedSound === s.id ? 'border-accent-cyan bg-accent-cyan/10 text-accent-cyan' : 'border-transparent bg-black/5'}`}>{s.label}</button>)}</div></div>
             </div>
           );
         };
@@ -895,7 +1053,7 @@
         return (
             <div className={`min-h-screen w-full flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-deep-900 text-white' : 'bg-slate-50 text-slate-900'} dark`}>
                 <div className={`w-full h-screen flex flex-col relative overflow-hidden`}>
-                    <div className="px-6 pt-6 sm:pt-8 pb-4 flex justify-between items-center z-10">
+                    <div className="px-6 pt-6 sm:pt-8 pb-4 flex justify-between items-center z-10 header-gradient">
                         <div className="flex items-center gap-3"><Logo className="w-10 h-10" /><div className="flex flex-col"><h1 className="text-2xl font-bold tracking-tight">EDA</h1><span className="text-[10px] opacity-60 leading-none">Hola, {userName}</span></div></div>
                         <div className="flex gap-2">
                           <button onClick={requestNotification} className={`p-2 rounded-full transition-colors ${notificationPermission === 'granted' ? (isDarkMode ? 'text-accent-cyan' : 'text-blue-500') : 'text-slate-400'}`}><Bell size={22} fill={notificationPermission === 'granted' ? "currentColor" : "none"} /></button>
@@ -906,7 +1064,7 @@
                     <div className="px-6 mb-4 z-10">
                         <div className={`flex p-1 rounded-xl ${isDarkMode ? 'bg-deep-800' : 'bg-white shadow-sm border border-slate-100'}`}>
                             {[ { id: ViewTab.TASKS, icon: Layout }, { id: ViewTab.CALENDAR, icon: CalendarIcon }, { id: ViewTab.NOTES, icon: StickyNote }, { id: ViewTab.CONVERTER, icon: FileType } ].map(tab => (
-                              <button key={tab.id} onClick={() => setCurrentTab(tab.id)} className={`flex-1 py-2 rounded-lg flex justify-center transition-all duration-300 ${currentTab === tab.id ? (isDarkMode ? 'bg-deep-700 text-accent-cyan shadow-md' : 'bg-blue-50 text-blue-600') : 'text-slate-400'}`}><tab.icon size={20} /></button>
+                              <button key={tab.id} onClick={() => setCurrentTab(tab.id)} className={`flex-1 py-2 rounded-lg module-tab-enhanced flex justify-center transition-all duration-300 ${currentTab === tab.id ? (isDarkMode ? 'bg-deep-700 text-accent-cyan shadow-md' : 'bg-blue-50 text-blue-600') : 'text-slate-400'}`}><tab.icon size={20} /></button>
                             ))}
                         </div>
                     </div>
@@ -952,12 +1110,12 @@
                                     <div className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg ${isDarkMode ? 'bg-slate-700' : 'bg-white text-blue-600'}`}><FileType size={40} /></div>
                                     <div className="text-center"><h3 className="font-bold text-xl mb-1">Convertir Word a PDF</h3><p className="text-sm opacity-60 mb-4">Arrastra o selecciona un archivo .docx</p><label className={`px-6 py-3 rounded-xl font-semibold cursor-pointer shadow-md transition-transform active:scale-95 inline-block ${isDarkMode ? 'bg-accent-cyan text-black' : 'bg-blue-600 text-white'}`}>Seleccionar Archivo<input type="file" accept=".docx" className="hidden" onChange={handleFileDrop} /></label></div>
                                 </div>
-                                <div className={`p-5 rounded-2xl border ${isDarkMode ? 'bg-slate-800/50 border-white/5' : 'bg-white border-slate-100 shadow-md'}`}><div className="flex gap-4"><div className={`p-3 rounded-xl h-fit ${isDarkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-50 text-green-600'}`}><Download size={24} /></div><div><h4 className="font-bold mb-1">100% Privado y Offline</h4><p className="text-sm opacity-70 leading-relaxed">La conversión se realiza mediante el motor JavaScript de tu dispositivo.</p></div></div></div>
+                                <div className={`p-5 rounded-2xl border ${isDarkMode ? 'bg-slate-800/50 border-white/5' : 'bg-white border-slate-100 shadow-md'}`}><div className="flex gap-4"><div className={`p-3 rounded-xl h-fit ${isDarkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-50 text-green-600'}`}><Download size={24} /></div><div><h4 className="font-bold mb-1">100% Privado y sin conexión</h4><p className="text-sm opacity-70 leading-relaxed">La conversión se realiza mediante el motor JavaScript de tu dispositivo.</p></div></div></div>
                             </div>
                         )}
                     </div>
 
-                    {currentTab === ViewTab.TASKS && <button onClick={() => setIsTaskModalOpen(true)} className={`absolute right-6 bottom-24 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-110 active:scale-90 z-40 ${isDarkMode ? 'bg-accent-pink text-white' : 'bg-slate-900 text-white'}`}><Plus size={28} /></button>}
+                    {currentTab === ViewTab.TASKS && <button onClick={() => setIsTaskModalOpen(true)} className={`absolute right-6 bottom-24 w-14 h-14 rounded-full shadow-2xl fab-accent flex items-center justify-center transition-transform hover:scale-110 active:scale-90 z-40 ${isDarkMode ? 'text-white' : 'text-white'}`}><Plus size={28} /></button>}
                     <EdiMascot tasks={tasks} isDarkMode={isDarkMode} currentTab={currentTab} userName={userName} mascotName={mascotName} onPositionChange={setMascotPosition} />
 
                     {isTaskModalOpen && (
@@ -996,7 +1154,7 @@
         root.render(<App />);
       } catch (err) {
         console.error('Mount error', err);
-        showErrorOverlay('Mount error', (err && err.stack) ? err.stack : String(err));
+        showErrorOverlay('Error de montaje', (err && err.stack) ? err.stack : String(err));
       }
     </script>
   </body>
