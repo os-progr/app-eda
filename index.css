@@ -1,0 +1,244 @@
+/* Importa la fuente */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+/* Variables CSS (Adaptadas al Modo Claro de la imagen) */
+:root {
+    --color-bg: #F0F4F8; /* Fondo principal gris claro */
+    --color-card-bg: #FFFFFF; /* Fondo de la tarjeta principal */
+    --color-text-dark: #333333;
+    --color-text-light: #666666;
+    --color-accent: #3F51B5; /* Un azul para botones activos/acentos */
+    --color-tab-bg: #E8EEF4; /* Fondo de la barra de navegación de módulos */
+    --color-border: #e9eef4;
+    --border-radius-xl: 1.5rem;
+    --shadow-light: 0 4px 15px rgba(0, 0, 0, 0.08); /* Sombra sutil */
+    --panda-size: 80px;
+}
+
+/* Modo Oscuro activable como: <html data-theme="dark"> */
+:root[data-theme="dark"] {
+    --color-bg: #0f0c29;
+    --color-card-bg: #1a1538;
+    --color-text-dark: #E0FFFF;
+    --color-text-light: #9BB8CD;
+    --color-accent: #00FFFF;
+    --color-tab-bg: #2C2754;
+    --shadow-light: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* Reset y mejoras */
+* { box-sizing: border-box; }
+html, body { height: 100%; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+
+body {
+    margin: 0;
+    font-family: 'Montserrat', sans-serif;
+    background-color: var(--color-bg);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100dvh; /* mejor en móviles modernos */
+    transition: background-color 0.35s ease, color 0.35s ease;
+    color: var(--color-text-dark);
+}
+
+/* Contenedor principal */
+#app-wrapper {
+    background-color: var(--color-card-bg);
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow-light);
+    width: 90%; /* Ancho de la tarjeta principal */
+    max-width: 400px; /* Tamaño máximo para simular móvil */
+    max-height: calc(100dvh - 24px); /* evita problemas de barras móviles */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Para contener la mascota y otros elementos */
+    position: relative; /* Para posicionar la mascota */
+}
+
+/* --- Header (Parte Superior) --- */
+#app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid var(--color-border); /* Separador sutil */
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+}
+
+.app-logo {
+    background-color: #E0F2F7; /* Color de fondo del logo */
+    color: var(--color-accent);
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.2rem;
+    margin-right: 10px;
+}
+
+.app-info h1 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.app-info p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--color-text-light);
+}
+
+.icon-button {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: var(--color-text-light);
+    cursor: pointer;
+    margin-left: 15px;
+    transition: color 0.2s ease, box-shadow 0.12s ease;
+    border-radius: 8px;
+    padding: 6px;
+}
+.icon-button:hover {
+    color: var(--color-accent);
+}
+.icon-button:focus,
+.icon-button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 20%, transparent 80%);
+}
+
+/* --- Barra de Navegación de Módulos --- */
+#module-nav {
+    display: flex;
+    justify-content: space-around;
+    background-color: var(--color-tab-bg);
+    padding: 10px 0;
+    margin: 0 20px; /* Margen para que no ocupe todo el ancho */
+    border-radius: 15px; /* Bordes redondeados */
+}
+
+.module-tab {
+    background: none;
+    border: none;
+    color: var(--color-text-light);
+    font-size: 1.2rem;
+    padding: 10px 15px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.12s ease;
+}
+.module-tab:hover { color: var(--color-accent); }
+.module-tab:focus,
+.module-tab:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 14%, transparent 86%);
+}
+
+.module-tab.active {
+    background-color: var(--color-card-bg); /* Fondo blanco para el activo */
+    color: var(--color-accent); /* Color azul de acento */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* Sombra sutil para el activo */
+}
+
+/* --- Contenido Principal de la Aplicación --- */
+#app-content {
+    flex-grow: 1; /* Ocupa el espacio restante */
+    padding: 20px;
+    position: relative; /* Para posicionar el panda */
+    overflow-y: auto; /* Si el contenido es largo */
+}
+
+.module-view {
+    display: none; /* Ocultar todos los módulos por defecto */
+    animation: fadeIn 0.35s ease-out;
+}
+.module-view.active {
+    display: block; /* Mostrar solo el módulo activo */
+}
+
+.module-view h2 {
+    font-size: 1.5rem;
+    margin-top: 0;
+    margin-bottom: 5px;
+}
+
+.sub-text {
+    font-size: 0.9rem;
+    color: var(--color-text-light);
+    margin-bottom: 20px;
+}
+
+.empty-state {
+    text-align: center;
+    margin-top: 50px;
+    color: var(--color-text-light);
+}
+.empty-state p:first-child {
+    font-weight: 500;
+}
+
+/* --- Mascota Edi (Panda) --- */
+.edi-mascot {
+    position: absolute;
+    bottom: 20px; /* Posición del panda en la parte inferior derecha */
+    right: 20px;
+    width: var(--panda-size);
+    height: var(--panda-size);
+    background-color: white; /* Cuerpo del panda blanco */
+    border-radius: 50%;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2rem; /* Para un icono temporal */
+    background-image: url('data:image/svg+xml;utf8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ccircle cx="50" cy="50" r="45" fill="%23f0f0f0"/%3E%3Ccircle cx="30" cy="35" r="10" fill="black"/%3E%3Ccircle cx="70" cy="35" r="10" fill="black"/%3E%3Cpath d="M40 60 Q50 70 60 60" fill="none" stroke="black" stroke-width="3"/%3E%3C/svg%3E');
+    background-size: cover;
+    background-position: center;
+    z-index: 5; /* Asegura que esté por encima del contenido */
+}
+
+/* Reemplaza el pseudo con z-index negativo por una sombra 'suelo' positiva */
+.edi-mascot::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(var(--panda-size) * 0.75);
+    height: calc(var(--panda-size) * 0.25);
+    background: rgba(0,0,0,0.14);
+    border-radius: 50%;
+    filter: blur(4px);
+    z-index: 1;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Animación de temblor para el panda enojado — no cambia color de fondo (imagen) */
+@keyframes shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(-4px) rotate(-1deg); }
+  75% { transform: translateX(4px) rotate(1deg); }
+}
+.edi-mascot.angry {
+    animation: shake 0.4s linear infinite;
+}
+
+/* Respecto a preferencias de movimiento del usuario */
+@media (prefers-reduced-motion: reduce) {
+    .module-view { animation: none !important; }
+    .edi-mascot.angry { animation: none !important; transform: none !important; }
+}

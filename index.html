@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f0c29" />
+    <title>EDA</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Babel for JSX support in browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Tailwind Config -->
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Montserrat', 'sans-serif'],
+            },
+            colors: {
+              deep: {
+                900: '#0f0c29',
+                800: '#302b63',
+                700: '#24243e',
+              },
+              accent: {
+                pink: '#ff00cc',
+                purple: '#333399',
+                cyan: '#00f2ff',
+                yellow: '#ffcc00',
+              }
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- Custom Styles -->
+    <style>
+      /* Hide scrollbar for cleaner UI */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      /* Paper Patterns */
+      .paper-lined {
+        background-color: #fdfbf7;
+        background-image: linear-gradient(#94a3b8 1px, transparent 1px);
+        background-size: 100% 2rem;
+        line-height: 2rem;
+      }
+      
+      .paper-grid {
+        background-color: #ffffff;
+        background-image: linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px);
+        background-size: 1.5rem 1.5rem;
+      }
+
+      .paper-kraft {
+        background-color: #d4b483;
+        background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+      }
+
+     /* Plantillas estilo "hoja de notas" (daily planner) */
+     .template-daily { background: linear-gradient(180deg,#f6fbff 0%,#ffffff 100%); padding: 1.25rem; }
+     .template-daily .tpl-header { display:flex; gap:12px; align-items:flex-start; margin-bottom:12px; }
+     .template-daily .tpl-title { font-size:20px; font-weight:700; flex:1; text-align:center; }
+     .template-daily .tpl-day { width:90px; border:1px solid rgba(0,0,0,0.08); padding:6px 8px; border-radius:6px; background:#fff; }
+     .template-daily .tpl-box { border:2px solid rgba(0,0,0,0.06); border-radius:8px; padding:10px; background:white; }
+     .template-daily .lined-area { background-image: linear-gradient(to bottom, rgba(0,0,0,0.06) 1px, transparent 1px); background-size: 100% 28px; min-height: 220px; padding:8px; }
+     .template-daily .two-col { display:flex; gap:12px; }
+     .template-daily .col { flex:1; }
+     .template-daily input, .template-daily textarea { border:0; outline:none; background:transparent; width:100%; font-family: inherit; resize:none; }
+
+     /* Simple lined preview */
+     .template-lined-preview { background: #fff; background-image: linear-gradient(#e6eef9 1px, transparent 1px); background-size: 100% 22px; }
+
+      /* Mascot Animations */
+      @keyframes shake {
+        0% { transform: translate(1px, 1px) rotate(0deg); }
+        10% { transform: translate(-1px, -2px) rotate(-1deg); }
+        20% { transform: translate(-3px, 0px) rotate(1deg); }
+        30% { transform: translate(3px, 2px) rotate(0deg); }
+        40% { transform: translate(1px, -1px) rotate(1deg); }
+        50% { transform: translate(-1px, 2px) rotate(-1deg); }
+        60% { transform: translate(-3px, 1px) rotate(0deg); }
+        70% { transform: translate(3px, 1px) rotate(-1deg); }
+        80% { transform: translate(-1px, -1px) rotate(1deg); }
+        90% { transform: translate(1px, 2px) rotate(0deg); }
+        100% { transform: translate(1px, -2px) rotate(-1deg); }
+      }
+      .animate-shake {
+        animation: shake 0.5s;
+        animation-iteration-count: infinite;
+      }
+
+      /* REALISTIC WALK CYCLE (Waddle) */
+      @keyframes walk-waddle {
+        0% { transform: translateY(0) rotate(-3deg); }
+        25% { transform: translateY(-5px) rotate(0deg); }
+        50% { transform: translateY(0) rotate(3deg); }
+        75% { transform: translateY(-5px) rotate(0deg); }
+        100% { transform: translateY(0) rotate(-3deg); }
+      }
+      .animate-walk-bounce {
+        animation: walk-waddle 0.8s infinite linear;
+      }
+
+      /* Leg movement synchronized with waddle */
+      @keyframes leg-cycle {
+        0% { transform: translateY(0); }
+        25% { transform: translateY(-4px); } /* Lift */
+        50% { transform: translateY(0); }    /* Land */
+        75% { transform: translateY(0); }    /* Stay planted while other lifts */
+        100% { transform: translateY(0); }
+      }
+      
+      .animate-leg-left {
+        animation: leg-cycle 0.8s infinite linear;
+      }
+      .animate-leg-right {
+        animation: leg-cycle 0.8s infinite linear;
+        animation-delay: 0.4s; /* Perfect offset for alternating steps */
+      }
+
+      @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+        100% { transform: translateY(0px); }
+      }
+      .animate-float {
+        animation: float 3s ease-in-out infinite;
+      }
+    </style>
+
+    <!-- Import Map for ES Modules -->
+    <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "lucide-react": "https://esm.sh/lucide-react@0.263.1",
+    "date-fns": "https://esm.sh/date-fns@2.30.0",
+    "date-fns/locale/es": "https://esm.sh/date-fns@2.30.0/locale/es",
+    "mammoth": "https://esm.sh/mammoth@1.6.0",
+    "jspdf": "https://esm.sh/jspdf@2.5.1",
+    "@capacitor/cli": "https://aistudiocdn.com/@capacitor/cli@^7.4.4",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "vite": "https://aistudiocdn.com/vite@^7.2.4",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1"
+  }
+}
+</script>
+<!-- UMD builds (agregar antes del script type="text/babel") -->
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<!-- Helpful UMD libs to avoid runtime ReferenceErrors in the browser -->
+<script src="https://cdn.jsdelivr.net/npm/date-fns@2.30.0/dist/date-fns.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/mammoth@1.6.0/dist/mammoth.browser.min.js"></script>
+</head>
+  <body>
+    <div id="root"></div>
+
+    <!-- MAIN APPLICATION LOGIC -->
+    <script type="text/babel">
+      // --- TYPES & ENUMS (Converted to JS Consts) ---
+      const ViewTab = {
+        TASKS: 'TASKS',
+        CALENDAR: 'CALENDAR',
+        NOTES: 'NOTES',
+        CONVERTER: 'CONVERTER'
+      };
+      
+      const TaskStatus = {
+        PENDING: 'PENDING',
+        COMPLETED: 'COMPLETED',
+        OVERDUE: 'OVERDUE'
+      };
+
+      // Desestructurar hooks desde React (uso con UMD builds)
+      const { useState, useEffect, useRef } = React;
+      // --- SHIMS / FALLBACKS ---
+      // Minimal date helpers (use window.dateFns if available)
+      const _dateFns = window.dateFns || {};
+      const format = _dateFns.format || function(d, pattern) {
+        const date = new Date(d);
+        if (pattern && pattern.includes('HH')) return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        if (pattern && pattern.includes('MMMM')) return date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+        return date.toLocaleDateString('es-ES');
+      };
+      const isSameDay = _dateFns.isSameDay || function(a,b){ const A=new Date(a), B=new Date(b); return A.getFullYear()===B.getFullYear() && A.getMonth()===B.getMonth() && A.getDate()===B.getDate(); };
+      const addDays = _dateFns.addDays || function(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+      const addMonths = _dateFns.addMonths || function(d,n){ const x=new Date(d); x.setMonth(x.getMonth()+n); return x; };
+      const endOfMonth = _dateFns.endOfMonth || function(d){ const x=new Date(d.getFullYear(), d.getMonth()+1, 0); return x; };
+      const isToday = _dateFns.isToday || function(d){ return isSameDay(new Date(), d); };
+      const isSameMonth = _dateFns.isSameMonth || function(a,b){ const A=new Date(a), B=new Date(b); return A.getFullYear()===B.getFullYear() && A.getMonth()===B.getMonth(); };
+      const differenceInDays = _dateFns.differenceInDays || function(a,b){ const diff = Math.floor((new Date(a) - new Date(b))/(1000*60*60*24)); return Math.abs(diff); };
+      // locale stub to avoid usage errors when code passes {locale: es}
+      const es = {};
+      // jsPDF / mammoth fallbacks (if UMD loaded these live on window)
+      const jsPDF = window.jspdf ? (window.jspdf.jsPDF || window.jspdf) : (window.jsPDF || undefined);
+      const mammoth = window.mammoth || undefined;
+
+      // ICON STUBS: create tiny React components to avoid ReferenceError for missing icon imports
+      const makeIcon = (label) => ({ size = 16, className = '' }) => React.createElement('span', { className, style: { display: 'inline-block', width: size, height: size, fontSize: Math.round(size * 0.6), lineHeight: `${size}px`, textAlign: 'center' }}, label[0] || '•');
+      const Check = makeIcon('Check');
+      const FileText = makeIcon('FileText');
+      const Trash2 = makeIcon('Trash2');
+      const Edit2 = makeIcon('Edit2');
+      const Share2 = makeIcon('Share2');
+      const RefreshCcw = makeIcon('RefreshCcw');
+      const Search = makeIcon('Search');
+      const Plus = makeIcon('Plus');
+      const Camera = makeIcon('Camera');
+      const Paperclip = makeIcon('Paperclip');
+      const FileType = makeIcon('FileType');
+      const Download = makeIcon('Download');
+      const Lock = makeIcon('Lock');
+      const MessageCircle = makeIcon('MessageCircle');
+      const User = makeIcon('User');
+      const Smile = makeIcon('Smile');
+      const ChevronLeft = makeIcon('ChevronLeft');
+      const ChevronRight = makeIcon('ChevronRight');
+      const Bell = makeIcon('Bell');
+      const Settings = makeIcon('Settings');
+      const X = makeIcon('X');
+      const Layout = makeIcon('Layout');
+      const CalendarIcon = makeIcon('CalendarIcon');
+      const StickyNote = makeIcon('StickyNote');
+      const Moon = makeIcon('Moon');
+      const Sun = makeIcon('Sun');
+      
+      // --- HELPER FUNCTIONS ---
+      const generateId = () => Math.random().toString(36).substr(2, 9);
+
+      // --- SOUND LOGIC ---
+      const playNotificationSound = (type = 'classic') => {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        const now = ctx.currentTime;
+
+        if (type === 'classic') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(500, now);
+          osc.frequency.exponentialRampToValueAtTime(1000, now + 0.1);
+          gain.gain.setValueAtTime(0.5, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+          osc.start(now);
+          osc.stop(now + 0.5);
+        } else if (type === 'retro') {
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.setValueAtTime(880, now + 0.1);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.linearRampToValueAtTime(0, now + 0.3);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        } else if (type === 'soft') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.linearRampToValueAtTime(600, now + 0.4);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.linearRampToValueAtTime(0, now + 0.6);
+          osc.start(now);
+          osc.stop(now + 0.6);
+        } else if (type === 'future') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(200, now);
+          osc.frequency.linearRampToValueAtTime(1200, now + 0.2);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        }
+      };
+
+      // --- COMPONENT: LOGO ---
+      const Logo = ({ className }) => (
+        <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M 50 15 A 35 35 0 1 0 50 85" stroke="#0055D4" strokeWidth="12" strokeLinecap="round"/>
+          <path d="M 22 50 H 48" stroke="#0055D4" strokeWidth="12" strokeLinecap="round"/>
+          <path d="M 56 15 V 85" stroke="#00C2CB" strokeWidth="12" strokeLinecap="round"/>
+          <path d="M 56 15 A 35 35 0 0 1 56 85" stroke="#00C2CB" strokeWidth="12" strokeLinecap="round"/>
+        </svg>
+      );
+
+      // --- COMPONENT: EDI MASCOT ---
+      const EdiMascot = ({ tasks, isDarkMode, currentTab, userName, mascotName, onPositionChange }) => {
+        const [message, setMessage] = useState("");
+        const [clicks, setClicks] = useState(0);
+        const [isAngry, setIsAngry] = useState(false);
+        const [positionX, setPositionX] = useState(0); // 0 = right, 1 = left
+        const [isMoving, setIsMoving] = useState(false);
+
+        const clickResetTimer = useRef(null);
+        const messageTimer = useRef(null);
+
+        const getIdlePhrases = () => [`¿Todo bien, ${userName}?`, "Aquí estaré.", "Organización = Éxito", "Bebe agua.", `¿Qué planes hoy, ${userName}?`, "Modo zen activado.", `Soy ${mascotName}, tu asistente.`];
+        const getWorkPhrases = () => ["¡A trabajar!", `No te rindas, ${userName}.`, "Tú puedes con esto.", "Una menos, faltan pocas.", "¡Concéntrate!", "Menos scroll, más acción."];
+        const getAngryPhrases = () => ["¡YA BASTA!", "¡Me mareas!", "¡Déjame en paz!", "¡Voy a reiniciarme!", "¡No me toques!", "¡Error 404: Paciencia not found!"];
+        const getWalkingPhrases = () => ["Patrullando el área...", "Concéntrate, no me mires.", "Revisando bambú... digo, tareas.", "Caminando voy...", "Vigilando..."];
+        const getConverterPhrases = () => ["Masticando documentos...", `Soy un ${mascotName} de oficina.`, "PDF listo en 3, 2...", "Dame ese Word."];
+        const getJokesPhrases = () => ["¿Sabes por qué los esqueletos son tan tranquilos? Porque nada les quita el sueño. ¡Jajaja!", "¿Qué le dice una impresora a otra? ¿Esa hoja es tuya o es impresión mía?", "¿Cuál es el colmo de un electricista? No encontrar la fase.", "Estás más perdido que un pulpo en un garaje...", "¿Qué hace una abeja en el gimnasio? ¡Zum-ba!"];
+        const getConfusedPhrases = () => ["Uff, esto no tiene ni pies ni cabeza.", "Mis circuitos cerebrales acaban de hacer corto.", "¿Me perdí de algo?", "Error 404: Sentido no encontrado."];
+        const getVariedPhrases = () => ["¡Con esa energía, podrías cargar mi batería!", `No te hagas el ${mascotName}, ¡sabes lo que tienes que hacer!`, "¡Deja de perder el tiempo!", "¿Cuál es tu superpoder de hoy?"];
+
+        useEffect(() => {
+            const moveInterval = setInterval(() => {
+                if (isAngry) return;
+                setIsMoving(true);
+                const wp = getWalkingPhrases();
+                setMessage(wp[Math.floor(Math.random() * wp.length)]);
+                
+                setTimeout(() => {
+                  setPositionX(prev => (prev === 0 ? 1 : 0)); 
+                }, 100);
+
+                setTimeout(() => {
+                  setIsMoving(false);
+                  setMessage("");
+                }, 6000); 
+
+            }, Math.random() * 10000 + 15000); 
+
+            return () => clearInterval(moveInterval);
+        }, [userName, mascotName, isAngry]);
+
+        const handleTouch = () => {
+          if (isAngry) return;
+          const newClicks = clicks + 1;
+          setClicks(newClicks);
+
+          if (clickResetTimer.current) clearTimeout(clickResetTimer.current);
+          clickResetTimer.current = setTimeout(() => setClicks(0), 1500);
+          if (messageTimer.current) clearTimeout(messageTimer.current);
+
+          if (newClicks >= 5) {
+            setIsAngry(true);
+            const ap = getAngryPhrases();
+            setMessage(ap[Math.floor(Math.random() * ap.length)]);
+            messageTimer.current = setTimeout(() => {
+              setIsAngry(false);
+              setClicks(0);
+              setMessage("");
+            }, 3000);
+            return;
+          }
+
+          let pool = [];
+          if (currentTab === ViewTab.CONVERTER) {
+              pool = getConverterPhrases();
+          } else if (tasks.filter(t => t.status === TaskStatus.PENDING).length > 3) {
+              pool = [...getWorkPhrases(), ...getVariedPhrases()];
+          } else {
+              pool = [...getIdlePhrases(), ...getJokesPhrases(), ...getConfusedPhrases(), ...getVariedPhrases()];
+          }
+          setMessage(pool[Math.floor(Math.random() * pool.length)]);
+          messageTimer.current = setTimeout(() => setMessage(""), 4000);
+        };
+
+        useEffect(() => {
+          onPositionChange(positionX);
+        }, [positionX, onPositionChange]);
+
+        return (
+          <div style={{
+              position: 'absolute',
+              bottom: '6rem', 
+              transition: isMoving ? 'left 6s linear' : 'left 0.5s ease-out',
+              left: positionX === 1 ? '20px' : 'calc(100% - 90px)',
+              zIndex: 50,
+              transform: positionX === 1 ? 'scaleX(-1)' : 'scaleX(1)' 
+          }}>
+              {message && (
+                  <div style={{ transform: positionX === 1 ? 'scaleX(-1)' : 'none' }} className={`absolute bottom-[110%] ${positionX === 1 ? 'right-0 origin-bottom-right text-right' : 'right-0 origin-bottom-right text-right'} w-max max-w-[260px] px-4 py-3 rounded-2xl text-sm font-bold shadow-xl z-[100] border leading-snug whitespace-normal ${isDarkMode ? 'bg-white text-black border-slate-300' : 'bg-slate-800 text-white border-slate-800'}`}>
+                      {message}
+                      <div className={`absolute bottom-[-6px] w-3 h-3 transform rotate-45 ${isDarkMode ? 'bg-white border-r border-b border-slate-300' : 'bg-slate-800'} right-6`}></div>
+                  </div>
+              )}
+
+              <div onClick={handleTouch} className={`relative w-20 h-24 cursor-pointer transition-transform duration-200 active:scale-90 flex flex-col items-center justify-end ${isAngry ? 'animate-shake' : ''} ${isMoving ? 'animate-walk-bounce' : 'animate-float'}`}>
+                  <div className="absolute top-0 left-2 w-4 h-4 bg-white rounded-full border border-slate-300 shadow-sm"></div>
+                  <div className="absolute top-0 right-2 w-4 h-4 bg-white rounded-full border border-slate-300 shadow-sm"></div>
+                  <div className="w-20 h-24 bg-white rounded-[45%] relative z-10 shadow-md border border-slate-300 flex flex-col items-center pt-6 overflow-hidden">
+                      <div className="flex gap-6 mb-1">
+                          <div className="w-1.5 h-1.5 bg-slate-900 rounded-full"></div>
+                          <div className="w-1.5 h-1.5 bg-slate-900 rounded-full"></div>
+                      </div>
+                      <div className="flex flex-col items-center -mt-1">
+                          <div className="w-3 h-2 bg-slate-900 rounded-full mb-0.5"></div>
+                          {isAngry && <div className="w-2 h-1 border-t-2 border-slate-900 rounded-full"></div>}
+                      </div>
+                      {!isMoving && (
+                        <>
+                          <div className="absolute top-12 left-1 w-3 h-6 border-l-2 border-slate-300 rounded-l-full opacity-50 rotate-12"></div>
+                          <div className="absolute top-12 right-1 w-3 h-6 border-r-2 border-slate-300 rounded-r-full opacity-50 -rotate-12"></div>
+                        </>
+                      )}
+                      <div className="absolute bottom-1 flex gap-1">
+                          <div className={`w-6 h-5 bg-white rounded-xl border border-slate-300 flex flex-col items-center justify-center pb-1 shadow-sm ${isMoving ? 'animate-leg-left' : ''}`}>
+                              <div className="flex gap-0.5 mb-0.5">
+                                  <div className="w-1 h-1 bg-slate-400 rounded-full"></div>
+                                  <div className="w-1 h-1 bg-slate-400 rounded-full"></div>
+                                  <div className="w-1 h-1 bg-slate-400 rounded-full"></div>
+                              </div>
+                              <div className="w-3 h-2 bg-slate-400 rounded-full"></div>
+                          </div>
+                          <div className={`w-6 h-5 bg-white rounded-xl border border-slate-300 flex flex-col items-center justify-center pb-1 shadow-sm ${isMoving ? 'animate-leg-right' : ''}`}>
+                              <div className="flex gap-0.5 mb-0.5">
+                                  <div className="w-1 h-1 bg-slate-400 rounded-full"></div>
+                                  <div className="w-1 h-1 bg-slate-400 rounded-full"></div>
+                                  <div className="w-1 h-1 bg-slate-400 rounded-full"></div>
+                              </div>
+                              <div className="w-3 h-2 bg-slate-400 rounded-full"></div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+        );
+      };
+
+      // --- COMPONENT: TASK CARD ---
+      const TaskCard = ({ task, onToggle, onDelete, onEdit, onRestore, isDarkMode, isDeleted }) => {
+        const handleShare = async (e) => {
+          e.stopPropagation();
+          if (navigator.share) {
+            try {
+              await navigator.share({
+                title: task.title,
+                text: `Tarea: ${task.title}\nEstado: ${task.status}\nFecha: ${format(new Date(task.dueDate), 'PP', { locale: es })}`,
+              });
+            } catch (err) { console.log(err); }
+          } else { alert('Compartir no soportado'); }
+        };
+
+        const downloadFile = (e) => {
+          e.stopPropagation();
+          if (task.file) {
+            const link = document.createElement('a');
+            link.href = task.file.data;
+            link.download = task.file.name;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+        };
+
+        return (
+          <div className={`relative group p-4 rounded-2xl border shadow-sm transition-all active:scale-[0.98] touch-manipulation ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-100 text-slate-800'} ${isDeleted ? 'opacity-75 grayscale' : ''}`}>
+            <div className="flex items-start gap-3">
+              {!isDeleted && (
+                <button onClick={() => onToggle(task.id)} className={`mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${task.status === TaskStatus.COMPLETED ? 'bg-green-500 border-green-500' : `border-slate-300 ${isDarkMode ? 'hover:border-white' : 'hover:border-slate-400'}`}`}>
+                  {task.status === TaskStatus.COMPLETED && <Check size={14} className="text-white" />}
+                </button>
+              )}
+              <div className="flex-1 min-w-0" onClick={() => !isDeleted && onToggle(task.id)}>
+                <h3 className={`font-semibold text-base truncate ${task.status === TaskStatus.COMPLETED ? 'line-through opacity-50' : ''}`}>{task.title}</h3>
+                <div className="flex items-center gap-2 mt-1 opacity-70 text-xs">
+                  <span className={`w-2 h-2 rounded-full ${task.color}`}></span>
+                  <span>{format(new Date(task.dueDate), 'PPP', { locale: es })}</span>
+                  {task.status === TaskStatus.OVERDUE && !isDeleted && <span className="text-red-500 font-bold ml-2">Atrasada</span>}
+                </div>
+                <div className="flex gap-2 mt-3 flex-wrap">
+                  {task.image && <img src={task.image} alt="attachment" className="w-16 h-16 object-cover rounded-lg border border-slate-200" />}
+                  {task.file && (
+                    <button onClick={downloadFile} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold ${isDarkMode ? 'bg-slate-700 border-slate-600 hover:bg-slate-600' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}>
+                      <FileText size={16} /> <span className="max-w-[100px] truncate">{task.file.name}</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                {isDeleted ? (
+                  <>
+                    <button onClick={(e) => { e.stopPropagation(); onRestore?.(task.id); }} className="p-2 text-slate-400 hover:text-green-500 transition-colors z-10"><RefreshCcw size={18} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); onDelete(task.id); }} className="p-2 text-slate-400 hover:text-red-500 transition-colors z-10"><Trash2 size={18} /></button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={(e) => { e.stopPropagation(); onDelete(task.id); }} className="p-2 text-slate-400 hover:text-red-500 transition-colors z-10"><Trash2 size={18} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); onEdit(task); }} className="p-2 text-slate-400 hover:text-blue-500 transition-colors z-10"><Edit2 size={18} /></button>
+                    <button onClick={handleShare} className="p-2 text-slate-400 hover:text-green-500 transition-colors z-10"><Share2 size={18} /></button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // --- MAIN APP ---
+      const App = () => {
+        const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+        const [currentTab, setCurrentTab] = useState(ViewTab.TASKS);
+        const [userName, setUserName] = useState(() => localStorage.getItem('userName') || "Usuario");
+        const [mascotName, setMascotName] = useState(() => localStorage.getItem('mascotName') || "Edi");
+        const [isBinUnlocked, setIsBinUnlocked] = useState(() => localStorage.getItem('binUnlocked') === 'true');
+        const [tasks, setTasks] = useState(() => { const saved = localStorage.getItem('tasks'); return saved ? JSON.parse(saved) : []; });
+        const [deletedTasks, setDeletedTasks] = useState(() => { const saved = localStorage.getItem('deletedTasks'); return saved ? JSON.parse(saved) : []; });
+        const [notes, setNotes] = useState(() => { const saved = localStorage.getItem('notes'); return saved ? JSON.parse(saved) : []; });
+        const [events, setEvents] = useState(() => { const saved = localStorage.getItem('events'); return saved ? JSON.parse(saved) : []; });
+        
+        const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+        const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+        const [settingsView, setSettingsView] = useState('main');
+        const [pinInput, setPinInput] = useState("");
+        const [deleteConfirmation, setDeleteConfirmation] = useState(null);
+        const [currentDate, setCurrentDate] = useState(new Date());
+        const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
+        const [selectedSound, setSelectedSound] = useState('classic');
+        const [searchQuery, setSearchQuery] = useState("");
+        
+        const [newItemTitle, setNewItemTitle] = useState("");
+        const [newItemDate, setNewItemDate] = useState("");
+        const [newItemColor, setNewItemColor] = useState("bg-blue-500");
+        const [newItemImage, setNewItemImage] = useState(undefined);
+        const [newItemFile, setNewItemFile] = useState(undefined);
+        const [editingTaskId, setEditingTaskId] = useState(null);
+        const [activeNoteId, setActiveNoteId] = useState(null);
+        // posición actual de la mascota (0 = derecha, 1 = izquierda) para reflejar alineaciones
+        const [mascotPosition, setMascotPosition] = useState(0);
+        // plantilla seleccionada para nuevas notas (daily / lined / simple)
+        const [noteTemplateSelection, setNoteTemplateSelection] = useState(() => localStorage.getItem('noteTemplateSelection') || 'template-daily');
+        useEffect(() => localStorage.setItem('noteTemplateSelection', noteTemplateSelection), [noteTemplateSelection]);
+
+        const cameraInputRef = useRef(null);
+        const generalFileInputRef = useRef(null);
+
+        useEffect(() => localStorage.setItem('theme', isDarkMode ? 'dark' : 'light'), [isDarkMode]);
+        useEffect(() => localStorage.setItem('tasks', JSON.stringify(tasks)), [tasks]);
+        useEffect(() => localStorage.setItem('deletedTasks', JSON.stringify(deletedTasks)), [deletedTasks]);
+        useEffect(() => localStorage.setItem('events', JSON.stringify(events)), [events]);
+        useEffect(() => localStorage.setItem('notes', JSON.stringify(notes)), [notes]);
+        useEffect(() => localStorage.setItem('soundPref', selectedSound), [selectedSound]);
+        useEffect(() => localStorage.setItem('userName', userName), [userName]);
+        useEffect(() => localStorage.setItem('mascotName', mascotName), [mascotName]);
+        useEffect(() => localStorage.setItem('binUnlocked', String(isBinUnlocked)), [isBinUnlocked]);
+
+        useEffect(() => {
+          const now = new Date();
+          const filteredDeleted = deletedTasks.filter(t => {
+            if (!t.deletedAt) return true;
+            return differenceInDays(now, new Date(t.deletedAt)) <= 31;
+          });
+          if (filteredDeleted.length !== deletedTasks.length) setDeletedTasks(filteredDeleted);
+        }, []);
+
+        useEffect(() => {
+          const interval = setInterval(() => {
+            if (notificationPermission === 'granted') {
+              const now = new Date();
+              tasks.forEach(t => {
+                if (t.status === TaskStatus.PENDING) {
+                  const due = new Date(t.dueDate);
+                  if (isSameDay(due, now) && due.getHours() === now.getHours() && due.getMinutes() === now.getMinutes()) {
+                    new Notification(`¡${mascotName} dice!`, { body: `Es hora de: ${t.title}` });
+                    playNotificationSound(selectedSound);
+                  }
+                }
+              });
+            }
+          }, 30000);
+          return () => clearInterval(interval);
+        }, [tasks, notificationPermission, selectedSound, mascotName]);
+
+        const handleSaveTask = () => {
+          if (!newItemTitle.trim()) return;
+          const dateObj = newItemDate ? new Date(newItemDate) : new Date();
+          if (editingTaskId) {
+            setTasks(prev => prev.map(t => t.id === editingTaskId ? { ...t, title: newItemTitle, dueDate: dateObj, color: newItemColor, image: newItemImage, file: newItemFile } : t));
+          } else {
+            const newTask = { id: generateId(), title: newItemTitle, status: TaskStatus.PENDING, dueDate: dateObj, color: newItemColor, image: newItemImage, file: newItemFile };
+            setTasks(prev => [newTask, ...prev]);
+            setEvents(prev => [...prev, { id: generateId(), title: newTask.title, start: dateObj, end: addDays(dateObj, 1), color: newItemColor }]);
+          }
+          setIsTaskModalOpen(false);
+          resetForm();
+        };
+
+        const resetForm = () => {
+          setNewItemTitle(""); setNewItemDate(""); setNewItemColor("bg-blue-500"); setNewItemImage(undefined); setNewItemFile(undefined); setEditingTaskId(null);
+        };
+
+        const openEditModal = (task) => {
+          setEditingTaskId(task.id); setNewItemTitle(task.title);
+          const d = new Date(task.dueDate); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+          setNewItemDate(d.toISOString().slice(0, 16)); setNewItemColor(task.color); setNewItemImage(task.image); setNewItemFile(task.file);
+          setIsTaskModalOpen(true);
+        };
+
+        const handleCameraCapture = (e) => {
+          const file = e.target.files?.[0];
+          if (file) { const reader = new FileReader(); reader.onloadend = () => setNewItemImage(reader.result); reader.readAsDataURL(file); }
+        };
+
+        const handleGenericFileSelect = (e) => {
+          const file = e.target.files?.[0];
+          if (file) { const reader = new FileReader(); reader.onloadend = () => setNewItemFile({ name: file.name, data: reader.result, type: file.type }); reader.readAsDataURL(file); }
+        };
+
+        const promptDelete = (type, id) => setDeleteConfirmation({ type, id });
+
+        const executeDelete = () => {
+          if (!deleteConfirmation) return;
+          if (deleteConfirmation.type === 'task') {
+            const taskToDelete = tasks.find(t => t.id === deleteConfirmation.id);
+            if (taskToDelete) {
+              setDeletedTasks(prev => [{ ...taskToDelete, deletedAt: new Date() }, ...prev]);
+              setTasks(prev => prev.filter(t => t.id !== deleteConfirmation.id));
+            }
+          } else {
+            setNotes(prev => prev.filter(n => n.id !== deleteConfirmation.id));
+            if (activeNoteId === deleteConfirmation.id) setActiveNoteId(null);
+          }
+          setDeleteConfirmation(null);
+        };
+
+        const restoreTask = (id) => {
+          const taskToRestore = deletedTasks.find(t => t.id === id);
+          if (taskToRestore) {
+            const { deletedAt, ...rest } = taskToRestore;
+            setTasks(prev => [rest, ...prev]);
+            setDeletedTasks(prev => prev.filter(t => t.id !== id));
+          }
+        };
+
+        const permanentDeleteTask = (id) => {
+          if (confirm("¿Eliminar definitivamente?")) setDeletedTasks(prev => prev.filter(t => t.id !== id));
+        };
+
+        const toggleTaskStatus = (id) => setTasks(prev => prev.map(t => t.id === id ? { ...t, status: t.status === TaskStatus.COMPLETED ? TaskStatus.PENDING : TaskStatus.COMPLETED } : t));
+
+        const clearHistory = () => {
+          if (confirm("¿Mover completadas a la papelera?")) {
+            const completed = tasks.filter(t => t.status === TaskStatus.COMPLETED);
+            setDeletedTasks(prev => [...completed.map(t => ({ ...t, deletedAt: new Date() })), ...prev]);
+            setTasks(prev => prev.filter(t => t.status !== TaskStatus.COMPLETED));
+          }
+        };
+
+        const requestNotification = () => Notification.requestPermission().then(p => { setNotificationPermission(p); if (p !== 'granted') alert("Permiso denegado."); });
+
+        const verifyPin = () => { if (pinInput === "EJT9HD") { setIsBinUnlocked(true); setSettingsView('bin'); setPinInput(""); } else alert("Incorrecto"); };
+
+        const requestPinCode = () => {
+           const msg = "Hola, cordial saludo. Solicito amablemente el código de seguridad para acceder a la papelera de reciclaje de la aplicación EDA por motivos académicos/de estudio. Quedo atento, muchas gracias.";
+           window.open(`https://wa.me/51900779111?text=${encodeURIComponent(msg)}`);
+        };
+
+        const handleFileDrop = async (e) => {
+            e.preventDefault();
+            let file = e.dataTransfer ? e.dataTransfer.files[0] : e.target.files[0];
+            if (file && file.name.endsWith('.docx')) {
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    const result = await mammoth.extractRawText({ arrayBuffer: event.target.result });
+                    const pdf = new jsPDF();
+                    pdf.splitTextToSize(result.value, 180).forEach((line, i) => { if (i > 0 && i % 28 === 0) pdf.addPage(); pdf.text(line, 10, 10 + (i % 28) * 10); });
+                    pdf.save(file.name.replace('.docx', '.pdf'));
+                };
+                reader.readAsArrayBuffer(file);
+            } else alert("Sube un archivo .docx");
+        };
+
+        const renderNotes = () => {
+          if (activeNoteId) {
+            const activeNote = notes.find(n => n.id === activeNoteId);
+            if (!activeNote) return null;
+
+            // Si la nota usa la plantilla "template-daily" mostramos el layout estructurado
+            if (activeNote.styleId === 'template-daily') {
+              return (
+                <div className="absolute inset-0 z-50 flex flex-col template-daily">
+                  <div className="tpl-header">
+                    {/* intercambiar visualmente día/fecha según posición de la mascota */}
+                    {mascotPosition === 0 ? (
+                      <>
+                        <div style={{width:90}} className="tpl-box">
+                          <input placeholder="Fecha" value={activeNote.date || ''} onChange={(e) => setNotes(prev => prev.map(n => n.id === activeNoteId ? { ...n, date: e.target.value } : n))} />
+                        </div>
+                        <div className="tpl-title">Notas</div>
+                        <div className="tpl-day tpl-box">
+                          <input placeholder="Día" value={activeNote.day || ''} onChange={(e) => setNotes(prev => prev.map(n => n.id === activeNoteId ? { ...n, day: e.target.value } : n))} />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="tpl-day tpl-box">
+                          <input placeholder="Día" value={activeNote.day || ''} onChange={(e) => setNotes(prev => prev.map(n => n.id === activeNoteId ? { ...n, day: e.target.value } : n))} />
+                        </div>
+                        <div className="tpl-title">Notas</div>
+                        <div style={{width:90}} className="tpl-box">
+                          <input placeholder="Fecha" value={activeNote.date || ''} onChange={(e) => setNotes(prev => prev.map(n => n.id === activeNoteId ? { ...n, date: e.target.value } : n))} />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <div className="mb-3 tpl-box">
+                    <input placeholder="Frase del día" value={activeNote.phrase || ''} onChange={(e) => setNotes(prev => prev.map(n => n.id === activeNoteId ? { ...n, phrase: e.target.value } : n))} />
+                  </div>
+                  <div className="two-col mb-3">
+                    <div className="col tpl-box">
+                      <div className="text-xs font-bold mb-2">Notas</div>
+                      <div className="lined-area">
+                        <textarea rows="10" value={activeNote.notesContent || ''} onChange={(e) => setNotes(prev => prev.map(n => n.id === activeNoteId ? { ...n, notesContent: e.target.value } : n))} placeholder="Escribe tus notas..." />
+                      </div>
+                    </div>
+                    <div className="col tpl-box">
+                      <div className="text-xs font-bold mb-2">To Do</div>
+                      <textarea rows="12" value={activeNote.todo || ''} onChange={(e) => setNotes(prev => prev.map(n => n.id === activeNoteId ? { ...n, todo: e.target.value } : n))} placeholder="Tareas..." />
+                    </div>
+                  </div>
+                  <div className="two-col">
+                    <div className="col tpl-box">
+                      <div className="text-xs font-bold mb-2">Recordatorios</div>
+                      <textarea rows="4" value={activeNote.reminders || ''} onChange={(e) => setNotes(prev => prev.map(n => n.id === activeNoteId ? { ...n, reminders: e.target.value } : n))} placeholder="Recordatorios..." />
+                    </div>
+                    <div className="col tpl-box">
+                      <div className="text-xs font-bold mb-2">Objetivos</div>
+                      <textarea rows="4" value={activeNote.objectives || ''} onChange={(e) => setNotes(prev => prev.map(n => n.id === activeNoteId ? { ...n, objectives: e.target.value } : n))} placeholder="Objetivos..." />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <button onClick={() => setActiveNoteId(null)} className="py-2 px-4 rounded-xl bg-slate-200">Cerrar</button>
+                    <button onClick={() => promptDelete('note', activeNoteId)} className="py-2 px-4 rounded-xl bg-red-500 text-white ml-auto">Eliminar</button>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div className={`absolute inset-0 z-50 flex flex-col ${activeNote.styleId === 'bg-slate-800' ? 'text-white' : 'text-slate-800'} ${!activeNote.styleId.startsWith('#') ? activeNote.styleId : ''}`} style={{ backgroundColor: activeNote.styleId.startsWith('#') ? activeNote.styleId : undefined }}>
+                 <div className="p-4 flex justify-between items-center border-b border-black/5 bg-white/10 backdrop-blur-md">
+                    <button onClick={() => setActiveNoteId(null)} className="p-2 rounded-full hover:bg-black/10"><ChevronLeft /></button>
+                    <span className="font-bold text-sm opacity-50">Editando</span>
+                    <button onClick={() => promptDelete('note', activeNoteId)} className="p-2 rounded-full hover:bg-red-500/20 text-red-500"><Trash2 size={20} /></button>
+                 </div>
+                 <input value={activeNote.title} onChange={(e) => setNotes(prev => prev.map(n => n.id === activeNoteId ? { ...n, title: e.target.value } : n))} className="px-6 py-4 text-2xl font-bold bg-transparent outline-none placeholder-current opacity-80" placeholder="Título..." />
+                 <textarea value={activeNote.content} onChange={(e) => setNotes(prev => prev.map(n => n.id === activeNoteId ? { ...n, content: e.target.value } : n))} className="flex-1 px-6 py-2 bg-transparent outline-none resize-none text-lg leading-relaxed placeholder-current opacity-70" placeholder="Escribe aquí..." />
+              </div>
+            );
+          }
+          return (
+            <div className="space-y-6 pb-24">
+               <div className="flex items-center gap-3">
+                  <div className="text-sm font-bold opacity-70">Plantillas</div>
+                  <div className="flex gap-2">
+                    {[
+                      { id: 'template-daily', label: 'Diaria' },
+                      { id: 'template-lined', label: 'Líneas' },
+                      { id: 'template-simple', label: 'Simple' }
+                    ].map(t => (
+                      <button key={t.id} onClick={() => setNoteTemplateSelection(t.id)} className={`w-24 h-12 rounded-lg border flex items-center justify-center text-xs ${noteTemplateSelection === t.id ? 'ring-2 ring-accent-cyan' : ''}`}>
+                        {t.label}
+                      </button>
+                    ))}
+
+                  </div>
+                  <div className="ml-auto text-xs opacity-60">Seleccionado: <span className="font-semibold ml-1">{noteTemplateSelection.replace('template-','')}</span></div>
+               </div>
+               <div className="grid grid-cols-2 gap-4">
+                  <button onClick={() => { const newNote = { id: generateId(), title: "", content: "", createdAt: new Date(), styleId: "bg-white" }; setNotes([newNote, ...notes]); setActiveNoteId(newNote.id); }} className={`aspect-square rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 opacity-60 hover:opacity-100 ${isDarkMode ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-300 hover:bg-slate-100'}`}><Plus size={30} /><span className="text-xs font-bold">Nueva Nota</span></button>
+                  <button onClick={() => {
+                      const newNote = {
+                        id: generateId(),
+                        title: "",
+                        createdAt: new Date(),
+                        styleId: noteTemplateSelection,
+                        // campos específicos para plantilla diaria
+                        day: "",
+                        date: "",
+                        phrase: "",
+                        notesContent: "",
+                        todo: "",
+                        reminders: "",
+                        objectives: ""
+                      };
+                      setNotes([newNote, ...notes]);
+                      setActiveNoteId(newNote.id);
+                    }} className={`aspect-square rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 opacity-60 hover:opacity-100 ${isDarkMode ? 'border-slate-700 hover:bg-slate-800' : 'border-slate-300 hover:bg-slate-100'}`}><Plus size={30} /><span className="text-xs font-bold">Nueva Nota</span></button>
+                   {notes.map(note => (
+                    <div key={note.id} onClick={() => setActiveNoteId(note.id)} className={`aspect-square rounded-2xl p-4 shadow-sm relative group cursor-pointer overflow-hidden border border-black/5 ${note.styleId}`} style={{ backgroundColor: note.styleId && note.styleId.startsWith('#') ? note.styleId : undefined }}>
+                      {/* preview para plantilla diaria */}
+                      {note.styleId === 'template-daily' ? (
+                        <div className="h-full flex flex-col justify-between">
+                          <div className="flex justify-between items-center mb-2">
+                            <div className="text-xs opacity-60">Día</div>
+                            <div className="text-xs opacity-60">{note.date || ''}</div>
+                          </div>
+                          <div className="template-lined-preview flex-1 rounded-md p-2">{(note.phrase && <div className="text-sm font-semibold mb-2 truncate">{note.phrase}</div>) || <div className="text-xs opacity-50">Frase del día</div>}</div>
+                          <div className="flex gap-2 mt-2 text-xs opacity-60"><div className="flex-1">{(note.notesContent && note.notesContent.slice(0,60)) || 'Notas...'}</div><div style={{width:80}}>{(note.todo && 'ToDo') || ''}</div></div>
+                        </div>
+                      ) : note.styleId === 'template-lined' ? (
+                        <div className="h-full template-lined-preview p-2">
+                          <h4 className={`font-bold line-clamp-2 ${note.styleId === 'bg-slate-800' ? 'text-white' : 'text-slate-800'}`}>{note.title || "Sin título"}</h4>
+                        </div>
+                      ) : (
+                        <>
+                          <h4 className={`font-bold line-clamp-2 ${note.styleId === 'bg-slate-800' ? 'text-white' : 'text-slate-800'}`}>{note.title || "Sin título"}</h4>
+                          <p className={`text-xs mt-2 line-clamp-4 ${note.styleId === 'bg-slate-800' ? 'text-slate-200' : 'text-slate-600'}`}>{note.notesContent || note.content || ''}</p>
+                        </>
+                      )}
+                    </div>
+                   ))}
+               </div>
+            </div>
+          );
+        };
+
+        const renderSettingsContent = () => {
+          if (settingsView === 'pin') {
+            return (
+              <div className="space-y-6 text-center">
+                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-500"><Lock size={30} /></div>
+                 <div><h3 className="text-lg font-bold">Acceso Restringido</h3><p className="text-xs opacity-60">Ingresa el código</p></div>
+                 <input type="text" maxLength={6} value={pinInput} onChange={(e) => setPinInput(e.target.value.toUpperCase())} className={`w-full text-center text-2xl font-bold tracking-widest p-3 rounded-xl border-2 outline-none ${isDarkMode ? 'bg-deep-900 border-slate-700' : 'bg-slate-50 border-slate-200'}`} placeholder="______" />
+                 <div className="space-y-2"><button onClick={verifyPin} className="w-full py-3 rounded-xl bg-accent-cyan text-black font-bold">Entrar</button><button onClick={requestPinCode} className="w-full py-3 rounded-xl text-xs flex items-center justify-center gap-2 opacity-60"><MessageCircle size={14} /> Solicitar Código</button></div>
+                 <button onClick={() => setSettingsView('main')} className="text-xs underline opacity-50">Volver</button>
+              </div>
+            );
+          }
+          if (settingsView === 'bin') {
+            return (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-4"><button onClick={() => setSettingsView('main')}><ChevronLeft size={20} /></button><h3 className="font-bold text-lg">Papelera ({deletedTasks.length})</h3></div>
+                {deletedTasks.length === 0 ? <div className="text-center py-10 opacity-50 text-xs">Vacía.</div> : <div className="space-y-3">{deletedTasks.map(t => <TaskCard key={t.id} task={t} onDelete={permanentDeleteTask} onRestore={restoreTask} isDarkMode={isDarkMode} isDeleted={true} />)}</div>}
+              </div>
+            );
+          }
+          return (
+            <div className="space-y-6">
+                <div className="space-y-3"><h4 className="text-sm font-bold uppercase opacity-60">Perfil</h4><div className={`flex items-center gap-3 p-3 rounded-xl border ${isDarkMode ? 'border-slate-700 bg-deep-900' : 'border-slate-200 bg-slate-50'}`}><User size={20} className="opacity-50" /><input value={userName} onChange={(e) => setUserName(e.target.value)} className="bg-transparent outline-none w-full font-semibold" /></div></div>
+                <div className="space-y-3"><h4 className="text-sm font-bold uppercase opacity-60">Mascota</h4><div className={`flex items-center gap-3 p-3 rounded-xl border ${isDarkMode ? 'border-slate-700 bg-deep-900' : 'border-slate-200 bg-slate-50'}`}><Smile size={20} className="opacity-50" /><input value={mascotName} onChange={(e) => setMascotName(e.target.value)} className="bg-transparent outline-none w-full font-semibold" /></div></div>
+                <div className="space-y-3"><h4 className="text-sm font-bold uppercase opacity-60">Seguridad</h4><button onClick={() => isBinUnlocked ? setSettingsView('bin') : setSettingsView('pin')} className={`w-full flex items-center justify-between p-3 rounded-xl border ${isDarkMode ? 'border-slate-700 bg-deep-900' : 'border-slate-200 bg-slate-50'}`}><div className="flex items-center gap-3"><Trash2 size={20} className="text-red-400" /><span className="font-semibold">Papelera</span></div><ChevronRight size={16} className="opacity-50" /></button></div>
+                <div className="space-y-3"><h4 className="text-sm font-bold uppercase opacity-60">Apariencia</h4><div onClick={() => setIsDarkMode(!isDarkMode)} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer ${isDarkMode ? 'border-slate-700 bg-deep-900' : 'border-slate-200 bg-slate-50'}`}><div className="flex items-center gap-3">{isDarkMode ? <Moon size={20} className="text-yellow-400" /> : <Sun size={20} className="text-orange-500" />}<span className="font-semibold">{isDarkMode ? 'Modo Oscuro' : 'Modo Claro'}</span></div><div className={`w-10 h-5 rounded-full relative transition-colors ${isDarkMode ? 'bg-accent-cyan' : 'bg-slate-300'}`}><div className={`absolute top-1 w-3 h-3 rounded-full bg-white shadow-sm transition-all duration-300 ${isDarkMode ? 'left-6' : 'left-1'}`} /></div></div></div>
+                <div className="space-y-3"><h4 className="text-sm font-bold uppercase opacity-60">Sonidos</h4><div className="grid grid-cols-2 gap-2">{['classic', 'retro', 'soft', 'future'].map(sound => <button key={sound} onClick={() => { setSelectedSound(sound); playNotificationSound(sound); }} className={`py-2 px-3 rounded-lg text-xs border font-medium capitalize ${selectedSound === sound ? 'border-accent-cyan bg-accent-cyan/10 text-accent-cyan' : 'border-transparent bg-black/5'}`}>{sound}</button>)}</div></div>
+            </div>
+          );
+        };
+
+        return (
+            <div className={`min-h-screen w-full flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-deep-900 text-white' : 'bg-slate-50 text-slate-900'} dark`}>
+                <div className={`w-full h-screen flex flex-col relative overflow-hidden`}>
+                    <div className="px-6 pt-6 sm:pt-8 pb-4 flex justify-between items-center z-10">
+                        <div className="flex items-center gap-3"><Logo className="w-10 h-10" /><div className="flex flex-col"><h1 className="text-2xl font-bold tracking-tight">EDA</h1><span className="text-[10px] opacity-60 leading-none">Hola, {userName}</span></div></div>
+                        <div className="flex gap-2">
+                          <button onClick={requestNotification} className={`p-2 rounded-full transition-colors ${notificationPermission === 'granted' ? (isDarkMode ? 'text-accent-cyan' : 'text-blue-500') : 'text-slate-400'}`}><Bell size={22} fill={notificationPermission === 'granted' ? "currentColor" : "none"} /></button>
+                          <button onClick={() => { setIsSettingsOpen(true); setSettingsView('main'); }} className={`p-2 rounded-full transition-colors ${isDarkMode ? 'bg-slate-800 text-slate-200' : 'bg-white text-slate-600 shadow-sm'}`}><Settings size={22} /></button>
+                        </div>
+                    </div>
+
+                    <div className="px-6 mb-4 z-10">
+                        <div className={`flex p-1 rounded-xl ${isDarkMode ? 'bg-deep-800' : 'bg-white shadow-sm border border-slate-100'}`}>
+                            {[ { id: ViewTab.TASKS, icon: Layout }, { id: ViewTab.CALENDAR, icon: CalendarIcon }, { id: ViewTab.NOTES, icon: StickyNote }, { id: ViewTab.CONVERTER, icon: FileType } ].map(tab => (
+                              <button key={tab.id} onClick={() => setCurrentTab(tab.id)} className={`flex-1 py-2 rounded-lg flex justify-center transition-all duration-300 ${currentTab === tab.id ? (isDarkMode ? 'bg-deep-700 text-accent-cyan shadow-md' : 'bg-blue-50 text-blue-600') : 'text-slate-400'}`}><tab.icon size={20} /></button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto px-6 pb-32 no-scrollbar">
+                        {currentTab === ViewTab.TASKS && (
+                            <div className="space-y-6">
+                                <div className="flex justify-between items-end mb-2">
+                                    <div><h2 className="text-xl font-bold">Mis Tareas</h2><p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{tasks.filter(t => t.status === TaskStatus.PENDING).length} pendientes</p></div>
+                                    {tasks.some(t => t.status === TaskStatus.COMPLETED) && <button onClick={clearHistory} className="text-xs text-red-500 font-semibold px-3 py-1 rounded-full hover:bg-red-500/10">Limpiar Historial</button>}
+                                </div>
+                                 <div className="relative mb-4"><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Buscar tareas..." className={`w-full p-3 pl-10 rounded-xl outline-none border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`} /><Search className="absolute left-3 top-3.5 text-slate-400" size={18} /></div>
+                                <div className="space-y-3">
+                                    {tasks.length === 0 && <div className="text-center py-12 opacity-50"><p>No tienes tareas aún.</p><p className="text-sm mt-2">Toca el + para empezar.</p></div>}
+                                    {tasks.filter(t => t.status !== TaskStatus.COMPLETED && t.title.toLowerCase().includes(searchQuery.toLowerCase())).map(task => <TaskCard key={task.id} task={task} onToggle={toggleTaskStatus} onDelete={(id) => promptDelete('task', id)} onEdit={openEditModal} isDarkMode={isDarkMode} />)}
+                                    {tasks.filter(t => t.status === TaskStatus.COMPLETED && t.title.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 && <><div className="text-xs font-bold uppercase tracking-widest opacity-50 mt-6 mb-2">Completadas</div>{tasks.filter(t => t.status === TaskStatus.COMPLETED && t.title.toLowerCase().includes(searchQuery.toLowerCase())).map(task => <TaskCard key={task.id} task={task} onToggle={toggleTaskStatus} onDelete={(id) => promptDelete('task', id)} onEdit={openEditModal} isDarkMode={isDarkMode} />)}</>}
+                                </div>
+                            </div>
+                        )}
+
+                        {currentTab === ViewTab.CALENDAR && (
+                            <div className="space-y-6">
+                                <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100 shadow-sm'}`}>
+                                    <div className="flex justify-between items-center mb-4"><button onClick={() => setCurrentDate(addMonths(currentDate, -1))} className="p-2"><ChevronLeft size={20} /></button><h2 className="font-bold text-lg capitalize">{format(currentDate, 'MMMM yyyy', { locale: es })}</h2><button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-2"><ChevronRight size={20} /></button></div>
+                                    <div className="grid grid-cols-7 gap-2 text-center mb-2">{['D','L','M','M','J','V','S'].map(d => <span key={d} className="text-xs font-bold opacity-50">{d}</span>)}</div>
+                                    <div className="grid grid-cols-7 gap-2 text-center">
+                                        {Array.from({ length: new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay() }).map((_, i) => <div key={`empty-${i}`} />)}
+                                        {Array.from({ length: endOfMonth(currentDate).getDate() }).map((_, i) => {
+                                            const day = i + 1; const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day); const hasEvent = events.some(e => isSameDay(new Date(e.start), date)); const isTodayDate = isToday(date);
+                                            return <div key={day} className={`aspect-square flex items-center justify-center rounded-full text-sm relative ${isTodayDate ? (isDarkMode ? 'bg-accent-cyan text-black font-bold' : 'bg-blue-600 text-white') : ''}`}>{day}{hasEvent && !isTodayDate && <div className={`absolute bottom-1 w-1 h-1 rounded-full ${isDarkMode ? 'bg-accent-pink' : 'bg-blue-400'}`} />}</div>;
+                                        })}
+                                    </div>
+                                </div>
+                                <div><h3 className="font-bold mb-3">Eventos del Mes</h3><div className="space-y-3">{events.filter(e => isSameMonth(new Date(e.start), currentDate)).sort((a,b) => new Date(a.start).getTime() - new Date(b.start).getTime()).map(event => <div key={event.id} className={`flex items-center gap-3 p-3 rounded-xl border-l-4 ${event.color.replace('bg-', 'border-')} ${isDarkMode ? 'bg-slate-800' : 'bg-white border border-slate-100'}`}><div className="flex flex-col items-center px-2"><span className="text-xs font-bold uppercase">{format(new Date(event.start), 'MMM', { locale: es })}</span><span className="text-lg font-bold">{format(new Date(event.start), 'd')}</span></div><div><h4 className="font-semibold">{event.title}</h4><p className="text-xs opacity-70">{format(new Date(event.start), 'HH:mm')}</p></div></div>)}</div></div>
+                            </div>
+                        )}
+
+                        {currentTab === ViewTab.NOTES && renderNotes()}
+
+                        {currentTab === ViewTab.CONVERTER && (
+                            <div className="space-y-6 flex flex-col h-full justify-center">
+                                <div className={`p-8 rounded-3xl border-2 border-dashed flex flex-col items-center justify-center gap-4 transition-all ${isDarkMode ? 'border-slate-700 bg-slate-800/30 hover:bg-slate-800/50' : 'border-slate-300 bg-slate-50 hover:bg-slate-100'}`} onDrop={handleFileDrop} onDragOver={(e) => e.preventDefault()}>
+                                    <div className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg ${isDarkMode ? 'bg-slate-700' : 'bg-white text-blue-600'}`}><FileType size={40} /></div>
+                                    <div className="text-center"><h3 className="font-bold text-xl mb-1">Convertir Word a PDF</h3><p className="text-sm opacity-60 mb-4">Arrastra o selecciona un archivo .docx</p><label className={`px-6 py-3 rounded-xl font-semibold cursor-pointer shadow-md transition-transform active:scale-95 inline-block ${isDarkMode ? 'bg-accent-cyan text-black' : 'bg-blue-600 text-white'}`}>Seleccionar Archivo<input type="file" accept=".docx" className="hidden" onChange={handleFileDrop} /></label></div>
+                                </div>
+                                <div className={`p-5 rounded-2xl border ${isDarkMode ? 'bg-slate-800/50 border-white/5' : 'bg-white border-slate-100 shadow-md'}`}><div className="flex gap-4"><div className={`p-3 rounded-xl h-fit ${isDarkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-50 text-green-600'}`}><Download size={24} /></div><div><h4 className="font-bold mb-1">100% Privado y Offline</h4><p className="text-sm opacity-70 leading-relaxed">La conversión se realiza mediante el motor JavaScript de tu dispositivo.</p></div></div></div>
+                            </div>
+                        )}
+                    </div>
+
+                    {currentTab === ViewTab.TASKS && <button onClick={() => setIsTaskModalOpen(true)} className={`absolute right-6 bottom-24 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-transform hover:scale-110 active:scale-90 z-40 ${isDarkMode ? 'bg-accent-pink text-white' : 'bg-slate-900 text-white'}`}><Plus size={28} /></button>}
+                    <EdiMascot tasks={tasks} isDarkMode={isDarkMode} currentTab={currentTab} userName={userName} mascotName={mascotName} onPositionChange={setMascotPosition} />
+
+                    {isTaskModalOpen && (
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4 sm:p-0">
+                            <div className={`w-full max-w-sm rounded-3xl p-6 shadow-2xl transform transition-all ${isDarkMode ? 'bg-deep-800 border border-slate-700' : 'bg-white'}`}>
+                                <div className="flex justify-between items-center mb-6"><h3 className="text-xl font-bold">{editingTaskId ? 'Editar Tarea' : 'Nueva Tarea'}</h3><button onClick={() => { setIsTaskModalOpen(false); resetForm(); }} className="p-2 rounded-full hover:bg-black/10"><X size={20} /></button></div>
+                                <div className="space-y-4">
+                                    <div><label className="text-xs font-bold uppercase opacity-50 ml-1">Título</label><input autoFocus value={newItemTitle} onChange={(e) => setNewItemTitle(e.target.value)} placeholder="Ej. Comprar leche" className={`w-full p-4 rounded-xl mt-1 outline-none border-2 focus:border-accent-cyan transition-colors text-base ${isDarkMode ? 'bg-deep-900 border-slate-700' : 'bg-slate-50 border-slate-200'}`} /></div>
+                                    <div className="flex gap-2"><div className="flex-1"><label className="text-xs font-bold uppercase opacity-50 ml-1">Fecha</label><input type="datetime-local" value={newItemDate} onChange={(e) => setNewItemDate(e.target.value)} className={`w-full p-3 rounded-xl mt-1 outline-none border-2 focus:border-accent-cyan text-sm ${isDarkMode ? 'bg-deep-900 border-slate-700' : 'bg-slate-50 border-slate-200'}`} /></div></div>
+                                    <div><label className="text-xs font-bold uppercase opacity-50 ml-1">Adjuntos</label><div className="flex gap-2 mt-1"><div onClick={() => cameraInputRef.current?.click()} className={`flex-1 h-[60px] rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors ${isDarkMode ? 'border-slate-600 hover:bg-slate-700' : 'border-slate-300 hover:bg-slate-100'} ${newItemImage ? 'border-green-500 bg-green-500/10' : ''}`}>{newItemImage ? <Check size={24} className="text-green-500" /> : <Camera size={24} className="opacity-50" />}<span className="text-[10px] font-bold mt-1 opacity-70">Cámara</span></div><div onClick={() => generalFileInputRef.current?.click()} className={`flex-1 h-[60px] rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors ${isDarkMode ? 'border-slate-600 hover:bg-slate-700' : 'border-slate-300 hover:bg-slate-100'} ${newItemFile ? 'border-blue-500 bg-blue-500/10' : ''}`}>{newItemFile ? <Check size={24} className="text-blue-500" /> : <Paperclip size={24} className="opacity-50" />}<span className="text-[10px] font-bold mt-1 opacity-70">Archivo</span></div><input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleCameraCapture} /><input ref={generalFileInputRef} type="file" className="hidden" onChange={handleGenericFileSelect} /></div></div>
+                                    <div><label className="text-xs font-bold uppercase opacity-50 ml-1">Color</label><div className="flex gap-3 mt-2">{['bg-blue-500', 'bg-purple-500', 'bg-pink-500', 'bg-yellow-500', 'bg-green-500'].map(color => <button key={color} onClick={() => setNewItemColor(color)} className={`w-8 h-8 rounded-full transition-transform ${color} ${newItemColor === color ? 'scale-125 ring-2 ring-offset-2 ring-accent-cyan' : ''}`} />)}</div></div>
+                                    <button onClick={handleSaveTask} className={`w-full py-4 rounded-xl font-bold mt-4 shadow-lg active:scale-95 transition-transform ${isDarkMode ? 'bg-white text-black' : 'bg-slate-900 text-white'}`}>{editingTaskId ? 'Guardar Cambios' : 'Crear Tarea'}</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {isSettingsOpen && (
+                        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                            <div className={`w-full max-w-xs rounded-3xl shadow-2xl overflow-hidden ${isDarkMode ? 'bg-deep-800 border border-slate-700' : 'bg-white'}`}>
+                                <div className="p-6">
+                                    <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold">Configuración</h3><button onClick={() => setIsSettingsOpen(false)} className="p-2 rounded-full hover:bg-black/10"><X size={20} /></button></div>
+                                    {renderSettingsContent()}
+                                </div>
+                            </div>
+                        </div>
+                                       )}
+                </div>
+            </div>
+        );
+      };
+
+      // --- MOUNT ROOT ---
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
