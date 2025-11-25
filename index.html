@@ -1,5 +1,4 @@
-
-            <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -562,7 +561,7 @@
                         <label id="drop-zone" for="file-input" class="flex flex-col items-center justify-center w-full h-48 rounded-lg cursor-pointer p-4 text-center">
                             <i data-lucide="file-up" class="w-12 h-12 text-muted mb-3"></i>
                             <span class="font-semibold text-light">Haz clic o arrastra un archivo .docx</span>
-                            <span class="text-sm text-muted">La conversión es simulada.</span>
+                            <span class="text-sm text-muted">Arrastra o selecciona un archivo .docx para convertir.</span>
                         </label>
                         <input id="file-input" type="file" accept=".docx, application/vnd.openxmlformats-officedocument.wordprocessingml.document">
                         
@@ -703,13 +702,19 @@
         let listenersInitialized = false; 
         let currentTab = 'tasks'; 
         let currentDocId = null; // Para edición: almacena el ID del documento a editar
+        let useLocalStorage = false; // Flag para usar localStorage cuando Firebase no esté disponible
         
         const loadingScreen = document.getElementById('loading-screen');
         const dashboardScreen = document.getElementById('dashboard-screen');
         const userDisplay = document.getElementById('user-display');
         const tabContentContainer = document.getElementById('tab-content-container');
 
-        setLogLevel('debug'); // Activar logs de Firebase
+        // Intentar activar logs de Firebase solo si está disponible
+        try {
+            setLogLevel('debug');
+        } catch (e) {
+            console.log('Firebase no disponible, usando modo local');
+        }
 
         // Colores para las notas y el selector de color del modal
         const NOTE_PASTEL_COLORS = {
@@ -740,7 +745,7 @@
         async function initializeFirebase() {
             loadingScreen.classList.remove('hidden');
             try {
-                if (Object.keys(firebaseConfig).length === 0) {
+                if (Object.keys(firebaseConfig).length === 0 || !firebaseConfig.apiKey) {
                     throw new Error("Configuración de Firebase no disponible.");
                 }
                 
@@ -753,6 +758,7 @@
                     if (user) {
                         userId = user.uid;
                         isAuthReady = true;
+                        useLocalStorage = false;
                         
                         // Mostrar UI de Dashboard
                         userDisplay.textContent = `Hola, Usuario (${userId.substring(0, 4)})`; 
@@ -777,10 +783,15 @@
                 }
                 
             } catch (error) {
-                console.error("Error al inicializar Firebase o al autenticar:", error);
-                // Mostrar el dashboard incluso si hay error
+                console.warn("Firebase no disponible, usando almacenamiento local:", error);
+                useLocalStorage = true;
+                userId = 'local-user-' + Date.now();
+                isAuthReady = true;
+                userDisplay.textContent = 'Hola, Usuario (Local)';
                 dashboardScreen.classList.remove('hidden');
                 loadingScreen.classList.add('hidden');
+                setupLocalStorageListeners();
+                lucide.createIcons();
             }
         }
 
@@ -822,8 +833,89 @@
         const getCollectionRef = (collectionName) => {
             // Ruta: /artifacts/{appId}/users/{userId}/{collectionName}
             // userId se obtiene automáticamente de la autenticación anónima
+            if (useLocalStorage || !db) {
+                return null; // No usar Firestore si estamos en modo local
+            }
             return collection(db, 'artifacts', appId, 'users', userId, collectionName);
         };
+
+        // =========================================================
+        // ALMACENAMIENTO LOCAL (localStorage) como respaldo
+        // =========================================================
+        
+        function getLocalStorageKey(collectionName) {
+            return `eda_${collectionName}_${userId}`;
+        }
+        
+        function loadFromLocalStorage(collectionName) {
+            try {
+                const key = getLocalStorageKey(collectionName);
+                const data = localStorage.getItem(key);
+                return data ? JSON.parse(data) : [];
+            } catch (e) {
+                console.error('Error al cargar desde localStorage:', e);
+                return [];
+            }
+        }
+        
+        function saveToLocalStorage(collectionName, items) {
+            try {
+                const key = getLocalStorageKey(collectionName);
+                localStorage.setItem(key, JSON.stringify(items));
+            } catch (e) {
+                console.error('Error al guardar en localStorage:', e);
+            }
+        }
+        
+        function setupLocalStorageListeners() {
+            // Cargar y mostrar tareas
+            const tasks = loadFromLocalStorage('tasks');
+            renderTasks(tasks);
+            
+            // Cargar y mostrar notas
+            const notes = loadFromLocalStorage('notes');
+            renderNotes(notes);
+        }
+        
+        function renderTasks(tasks) {
+            taskList.innerHTML = '';
+            const pendingCount = tasks.filter(t => !t.completed).length;
+            tasksCountDisplay.textContent = `${pendingCount} pendiente${pendingCount === 1 ? '' : 's'}`;
+            
+            if (tasks.length === 0) {
+                taskEmptyState.classList.remove('hidden');
+            } else {
+                taskEmptyState.classList.add('hidden');
+                tasks.sort((a, b) => {
+                    if (a.completed !== b.completed) {
+                        return a.completed ? 1 : -1;
+                    }
+                    return (b.createdAt || 0) - (a.createdAt || 0);
+                });
+                tasks.forEach(task => {
+                    taskList.appendChild(createTaskElement(task));
+                });
+            }
+            lucide.createIcons();
+        }
+        
+        function renderNotes(notes) {
+            notesGrid.innerHTML = '';
+            if (notes.length === 0) {
+                notesEmptyState.classList.remove('hidden');
+            } else {
+                notesEmptyState.classList.add('hidden');
+                notes.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+                notes.forEach(note => {
+                    notesGrid.appendChild(createNoteElement(note));
+                });
+            }
+            notesGrid.querySelectorAll('.note-textarea').forEach(textarea => {
+                textarea.style.height = 'auto';
+                textarea.style.height = textarea.scrollHeight + 'px';
+            });
+            lucide.createIcons();
+        }
 
         // --- TAREAS (Tasks) ---
 
@@ -896,14 +988,26 @@
 
             if (task.dueDate) {
                 const date = document.createElement('span');
-                // Convertir Timestamp a objeto Date para formatear
-                const dateObj = task.dueDate.toDate(); 
-                const formattedDate = dateObj.toLocaleDateString('es-ES', { 
-                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-                });
-                date.textContent = `Vence: ${formattedDate}`;
-                date.className = 'block text-xs text-muted mt-1';
-                textContainer.appendChild(date);
+                // Convertir Timestamp a objeto Date para formatear (puede ser Timestamp de Firestore o Date normal)
+                let dateObj;
+                if (task.dueDate && typeof task.dueDate.toDate === 'function') {
+                    dateObj = task.dueDate.toDate();
+                } else if (task.dueDate instanceof Date) {
+                    dateObj = task.dueDate;
+                } else if (typeof task.dueDate === 'number' || typeof task.dueDate === 'string') {
+                    dateObj = new Date(task.dueDate);
+                } else {
+                    dateObj = null;
+                }
+                
+                if (dateObj && !isNaN(dateObj.getTime())) {
+                    const formattedDate = dateObj.toLocaleDateString('es-ES', { 
+                        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                    });
+                    date.textContent = `Vence: ${formattedDate}`;
+                    date.className = 'block text-xs text-muted mt-1';
+                    textContainer.appendChild(date);
+                }
             }
             
             const actions = document.createElement('div');
@@ -938,15 +1042,25 @@
 
         async function toggleTaskCompletion(taskId, completed) {
             try {
-                const taskRef = doc(getCollectionRef('tasks'), taskId);
-                await updateDoc(taskRef, { completed: completed });
+                if (useLocalStorage) {
+                    const tasks = loadFromLocalStorage('tasks');
+                    const taskIndex = tasks.findIndex(t => t.id === taskId);
+                    if (taskIndex !== -1) {
+                        tasks[taskIndex].completed = completed;
+                        saveToLocalStorage('tasks', tasks);
+                        renderTasks(tasks);
+                    }
+                } else {
+                    const taskRef = doc(getCollectionRef('tasks'), taskId);
+                    await updateDoc(taskRef, { completed: completed });
+                }
             } catch (error) {
                 console.error("Error al actualizar tarea:", error);
             }
         }
 
         /**
-         * Agrega una nueva tarea a Firestore con todos los campos.
+         * Agrega una nueva tarea a Firestore o localStorage con todos los campos.
          */
         async function saveTask(title, dateString, attachments) {
             if (!title.trim()) return;
@@ -962,22 +1076,46 @@
             const taskData = {
                 title: title.trim(),
                 dueDate: dueDate,
-                attachments: attachments,
+                attachments: attachments || [],
                 color: DEFAULT_TASK_COLOR, 
             };
 
             try {
-                if (currentDocId) {
-                    // Edición
-                    const taskRef = doc(getCollectionRef('tasks'), currentDocId);
-                    await updateDoc(taskRef, taskData);
+                if (useLocalStorage) {
+                    const tasks = loadFromLocalStorage('tasks');
+                    if (currentDocId) {
+                        // Edición
+                        const taskIndex = tasks.findIndex(t => t.id === currentDocId);
+                        if (taskIndex !== -1) {
+                            tasks[taskIndex] = { ...tasks[taskIndex], ...taskData };
+                            saveToLocalStorage('tasks', tasks);
+                            renderTasks(tasks);
+                        }
+                    } else {
+                        // Creación
+                        const newTask = {
+                            id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                            ...taskData,
+                            completed: false,
+                            createdAt: Date.now(),
+                        };
+                        tasks.push(newTask);
+                        saveToLocalStorage('tasks', tasks);
+                        renderTasks(tasks);
+                    }
                 } else {
-                    // Creación
-                    await addDoc(getCollectionRef('tasks'), {
-                        ...taskData,
-                        completed: false,
-                        createdAt: serverTimestamp(),
-                    });
+                    if (currentDocId) {
+                        // Edición
+                        const taskRef = doc(getCollectionRef('tasks'), currentDocId);
+                        await updateDoc(taskRef, taskData);
+                    } else {
+                        // Creación
+                        await addDoc(getCollectionRef('tasks'), {
+                            ...taskData,
+                            completed: false,
+                            createdAt: serverTimestamp(),
+                        });
+                    }
                 }
             } catch (error) {
                 console.error("Error al guardar tarea:", error);
@@ -999,21 +1137,44 @@
              const noteData = {
                  content: content.trim(), 
                  color: NOTE_BACKGROUND_CLASSES[colorName] || NOTE_BACKGROUND_CLASSES.beige,
-                 attachments: attachments,
-                 updatedAt: serverTimestamp(),
+                 attachments: attachments || [],
+                 updatedAt: useLocalStorage ? Date.now() : serverTimestamp(),
              };
 
              try {
-                 if (currentDocId) {
-                     // Edición (aunque la edición principal es inline, esto es para el modal)
-                     const noteRef = doc(getCollectionRef('notes'), currentDocId);
-                     await updateDoc(noteRef, noteData);
+                 if (useLocalStorage) {
+                     const notes = loadFromLocalStorage('notes');
+                     if (currentDocId) {
+                         // Edición
+                         const noteIndex = notes.findIndex(n => n.id === currentDocId);
+                         if (noteIndex !== -1) {
+                             notes[noteIndex] = { ...notes[noteIndex], ...noteData };
+                             saveToLocalStorage('notes', notes);
+                             renderNotes(notes);
+                         }
+                     } else {
+                         // Creación
+                         const newNote = {
+                             id: 'note_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                             ...noteData,
+                             createdAt: Date.now(),
+                         };
+                         notes.push(newNote);
+                         saveToLocalStorage('notes', notes);
+                         renderNotes(notes);
+                     }
                  } else {
-                     // Creación
-                     await addDoc(getCollectionRef('notes'), {
-                         ...noteData,
-                         createdAt: serverTimestamp(),
-                     });
+                     if (currentDocId) {
+                         // Edición (aunque la edición principal es inline, esto es para el modal)
+                         const noteRef = doc(getCollectionRef('notes'), currentDocId);
+                         await updateDoc(noteRef, noteData);
+                     } else {
+                         // Creación
+                         await addDoc(getCollectionRef('notes'), {
+                             ...noteData,
+                             createdAt: serverTimestamp(),
+                         });
+                     }
                  }
              } catch (error) {
                  console.error("Error al guardar nota:", error);
@@ -1098,8 +1259,18 @@
         // Guarda el contenido de la nota cuando se edita directamente en la cuadrícula
         async function saveNoteContentInline(noteId, content) {
             try {
-                const noteRef = doc(getCollectionRef('notes'), noteId);
-                await setDoc(noteRef, { content: content, updatedAt: serverTimestamp() }, { merge: true });
+                if (useLocalStorage) {
+                    const notes = loadFromLocalStorage('notes');
+                    const noteIndex = notes.findIndex(n => n.id === noteId);
+                    if (noteIndex !== -1) {
+                        notes[noteIndex].content = content;
+                        notes[noteIndex].updatedAt = Date.now();
+                        saveToLocalStorage('notes', notes);
+                    }
+                } else {
+                    const noteRef = doc(getCollectionRef('notes'), noteId);
+                    await setDoc(noteRef, { content: content, updatedAt: serverTimestamp() }, { merge: true });
+                }
             } catch (error) {
                 console.error("Error al guardar nota inline:", error);
             }
@@ -1128,10 +1299,20 @@
         function setupFirestoreListeners() {
             if (listenersInitialized) return;
             
+            // Si estamos usando localStorage, no configurar listeners de Firestore
+            if (useLocalStorage) {
+                setupLocalStorageListeners();
+                listenersInitialized = true;
+                return;
+            }
+            
             // COMPROBACIÓN ADICIONAL Y EXPLÍCITA PARA EVITAR LA CONDICIÓN DE CARRERA DE AUTENTICACIÓN
-            const currentUser = auth.currentUser;
+            const currentUser = auth?.currentUser;
             if (!currentUser || !currentUser.uid) {
-                 console.warn("No hay usuario de Firebase activo (o no se ha sincronizado la autenticación). Saliendo de setupFirestoreListeners.");
+                 console.warn("No hay usuario de Firebase activo (o no se ha sincronizado la autenticación). Usando modo local.");
+                 useLocalStorage = true;
+                 setupLocalStorageListeners();
+                 listenersInitialized = true;
                  return;
             }
             // Aseguramos que el global userId sea el mismo.
@@ -1152,7 +1333,9 @@
                             return a.completed ? 1 : -1;
                         }
                         // Ordenar por fecha de creación (más reciente primero)
-                        return (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0);
+                        const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt || 0);
+                        const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt || 0);
+                        return bTime - aTime;
                     });
 
                     taskList.innerHTML = '';
@@ -1182,7 +1365,11 @@
                     });
                     
                     // Ordenar en JavaScript por última actualización (más reciente primero)
-                    notes.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
+                    notes.sort((a, b) => {
+                        const aTime = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt || 0);
+                        const bTime = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt || 0);
+                        return bTime - aTime;
+                    });
 
                     notesGrid.innerHTML = '';
                     if (notes.length === 0) {
@@ -1498,8 +1685,19 @@
             const collectionName = docType === 'task' ? 'tasks' : 'notes';
             
             try {
-                const docRef = doc(getCollectionRef(collectionName), docId);
-                await deleteDoc(docRef);
+                if (useLocalStorage) {
+                    const items = loadFromLocalStorage(collectionName);
+                    const filteredItems = items.filter(item => item.id !== docId);
+                    saveToLocalStorage(collectionName, filteredItems);
+                    if (collectionName === 'tasks') {
+                        renderTasks(filteredItems);
+                    } else {
+                        renderNotes(filteredItems);
+                    }
+                } else {
+                    const docRef = doc(getCollectionRef(collectionName), docId);
+                    await deleteDoc(docRef);
+                }
             } catch (error) {
                 console.error(`Error al eliminar documento (${docType}):`, error);
                 showMessageModal("Error al eliminar. Verifique la conexión.", "Error");
@@ -1593,12 +1791,25 @@
                     
                     // Paso 4: Convertir HTML a PDF usando html2pdf
                     const opt = {
-                        margin: 0,
+                        margin: [10, 10, 10, 10],
                         filename: selectedFile.name.replace('.docx', '.pdf'),
                         image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { scale: 2, useCORS: true },
-                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                        html2canvas: { 
+                            scale: 2, 
+                            useCORS: true,
+                            logging: false,
+                            letterRendering: true
+                        },
+                        jsPDF: { 
+                            unit: 'mm', 
+                            format: 'a4', 
+                            orientation: 'portrait',
+                            compress: true
+                        }
                     };
+                    
+                    // Esperar un momento para que el DOM se renderice completamente
+                    await new Promise(resolve => setTimeout(resolve, 100));
                     
                     await html2pdf().set(opt).from(tempDiv).save();
                     
@@ -1650,4 +1861,3 @@
     </script>
 </body>
 </html>
-
